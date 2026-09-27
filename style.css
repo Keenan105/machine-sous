@@ -1037,3 +1037,17 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
   background: linear-gradient(180deg, #ffffff, #c9dcff);
   box-shadow: 0 2px 0 #6a86c8, 0 0 6px rgba(180, 225, 255, 0.8);
 }
+
+/* the orb carries a single, full-size T */
+#spin kbd { display: none; }
+#spin .spin-t {
+  font-family: Cinzel, Georgia, serif;
+  font-weight: 900;
+  font-size: 78px;
+  line-height: 1;
+  letter-spacing: 0;
+  margin-top: 4px;
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(180, 225, 255, 0.95), 0 3px 4px rgba(0, 0, 0, 0.6);
+}
+@media (max-width: 520px) { #spin .spin-t { font-size: 70px; } }
