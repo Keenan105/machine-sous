@@ -2046,7 +2046,7 @@ const audio = {
   setLevel(l) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    this.rain.g.gain.setTargetAtTime([0.05, 0.08, 0.1, 0.12, 0.15][l], now, 0.8);
+    this.rain.g.gain.setTargetAtTime([0.02, 0.03, 0.04, 0.05, 0.06][l], now, 0.8);
     this.wind.g.gain.setTargetAtTime([0, 0.3, 0.45, 0.65, 0.9][l], now, 1.2);
     this.rumbleBed.g.gain.setTargetAtTime([0, 0, 0.3, 0.7, 1.1][l], now, 1.2);
     this.lfo.frequency.setTargetAtTime(0.12 + l * 0.12, now, 1);
@@ -2130,7 +2130,7 @@ const audio = {
   },
   whoosh() { if (this.ctx) this.burst(this.noise, 'bandpass', 700, 0.15, 0.08, 0.35, 0, 2000); },
   gust() { if (this.ctx) this.burst(this.noise, 'bandpass', 300, 0.6, 0.3, 1.4, 0, 1200); },
-  downpour() { if (this.ctx) this.burst(this.noise, 'highpass', 900, 0.45, 0.4, 3); },
+  downpour() { if (this.ctx) this.burst(this.noise, 'highpass', 900, 0.22, 0.4, 3); },
   roar() {
     if (!this.ctx) return;
     this.tone(110, 0.35, 1.4, 0, 'sawtooth', 55);
@@ -2255,7 +2255,7 @@ function buildPaytable() {
     return `<div class="pay"><span class="e">${symbolSVG(k)}</span><div><b>${s.name}</b><small>8-9 : ×${x(s.pay[0])} · 10-11 : ×${x(s.pay[1])}<br>12+ : ×${x(s.pay[2])}</small></div></div>`;
   });
   rows.push(`<div class="pay"><span class="e">${symbolSVG('wild')}</span><div><b>Storm Wild</b><small>Remplace tout symbole payant</small></div></div>`);
-  rows.push(`<div class="pay"><span class="e">${symbolSVG('charge')}</span><div><b>Charge</b><small>2 ⚡ et 3 ⚡ : événement<br>4 ⚡ : Eye of the Storm</small></div></div>`);
+  rows.push(`<div class="pay"><span class="e">${symbolSVG('charge')}</span><div><b>Charge</b><small>2 et 3 éclairs : événement<br>4 éclairs : Eye of the Storm</small></div></div>`);
   rows.push(`<div class="pay"><span class="e">${symbolSVG('dragon')}</span><div><b>Gardien</b><small>Devient Wild et frappe la grille</small></div></div>`);
   $('#paytable').innerHTML = rows.join('');
   $('#mathInfo').textContent = `RTP théorique ≈ 96 % (simulation) · gain max ×${CONFIG.maxWinX} la mise · valeurs de la table en multiples de la mise.`;
@@ -2267,6 +2267,11 @@ $('#betDown').addEventListener('click', () => { if (!state.busy) { state.betIdx 
 $('#auto').addEventListener('click', () => { state.auto = !state.auto; updateUI(); if (state.auto) spin(); });
 document.querySelectorAll('.buy-btn').forEach((b) => b.addEventListener('click', () => openBuy(b.dataset.kind)));
 $('#buyClose').addEventListener('click', closeBuy);
+const openRules = () => { $('#rulesModal').hidden = false; $('#rulesClose').focus(); };
+const closeRules = () => { $('#rulesModal').hidden = true; };
+$('#rulesBtn').addEventListener('click', openRules);
+$('#rulesClose').addEventListener('click', closeRules);
+$('#rulesModal').addEventListener('click', (e) => { if (e.target.id === 'rulesModal') closeRules(); });
 $('#confirmYes').addEventListener('click', () => { if (pendingKind) buyBonus(pendingKind); });
 $('#confirmNo').addEventListener('click', showOffers);
 $('#buyModal').addEventListener('click', (e) => {
@@ -2281,6 +2286,7 @@ $('#sound').addEventListener('click', (e) => {
   e.currentTarget.classList.toggle('muted', !on);
 });
 document.addEventListener('keydown', (e) => {
+  if (!$('#rulesModal').hidden) { if (e.code === 'Escape') closeRules(); return; }
   if (!$('#buyModal').hidden) { if (e.code === 'Escape') { if (pendingKind) showOffers(); else closeBuy(); } return; }
   if ((e.code === 'KeyT' || e.code === 'Space') && !e.repeat && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SUMMARY') { e.preventDefault(); spin(); }
 });

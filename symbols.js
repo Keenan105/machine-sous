@@ -38,9 +38,15 @@
     <filter id="wxGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <linearGradient id="icoMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c3cddd"/><stop offset="1" stop-color="#7d889c"/></linearGradient>
     <radialGradient id="icoEye" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#fff6b0"/><stop offset=".35" stop-color="#ffb02e"/><stop offset=".75" stop-color="#d8341e"/><stop offset="1" stop-color="#5a0a12"/></radialGradient>
+    <linearGradient id="icoParch" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6dc"/><stop offset="1" stop-color="#d2ae6c"/></linearGradient>
   </defs>`;
 
   const ART = {
+    icorules: `
+      <path d="M18 10 H46 C50 10 52 13 52 16 V50 C52 54 49 56 46 56 H20 C15 56 12 53 12 48 V16 C12 13 14 10 18 10 Z" fill="url(#icoParch)" stroke="#6b4a1a" stroke-width="2"/>
+      <path d="M12 48 C12 44 15 42 19 42 C23 42 24 46 22 48 C20 50 16 49 16 46" fill="none" stroke="#6b4a1a" stroke-width="2" stroke-linecap="round"/>
+      <path d="M44 10 C48 10 52 12 52 16 C52 20 48 21 46 19" fill="none" stroke="#6b4a1a" stroke-width="2" stroke-linecap="round"/>
+      <g stroke="#6b4a1a" stroke-width="2.4" stroke-linecap="round" opacity=".8"><path d="M22 20 H42"/><path d="M22 27 H44"/><path d="M22 34 H40"/><path d="M28 41 H44"/></g>`,
     icoauto: `
       <g fill="none" stroke="url(#icoMetal)" stroke-width="5.5" stroke-linecap="round">
         <path d="M49 25 A19 19 0 0 0 16 20"/>

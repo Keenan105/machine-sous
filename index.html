@@ -120,22 +120,29 @@
       </div>
     </section>
 
-    <div id="msg">Appuie sur SPIN (ou la touche T) pour réveiller la tempête.</div>
+    <div id="msg">Appuie sur T pour réveiller la tempête.</div>
 
-    <details id="rules">
-      <summary>Règles &amp; table des gains</summary>
+    <button id="rulesBtn" class="knob" title="Règles et table des gains" aria-label="Règles et table des gains"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-icorules"/></svg></button>
+
+
+  </div>
+
+  <div id="rulesModal" hidden>
+    <div class="buy-card rules-card" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+      <h2 id="rulesTitle">Règles &amp; table des gains</h2>
       <div id="paytable"></div>
       <ul class="rules">
         <li><b>Gains partout :</b> 8 symboles identiques ou plus, n'importe où sur la grille 6×5 (Wilds compris, avec au moins 4 vrais symboles). Les gagnants explosent et d'autres tombent en cascade.</li>
         <li><b>Météo :</b> chaque tour commence sous la Pluie. Chaque cascade gagnante renforce la tempête (Vent ×1,5 → Orage ×2 → Supercellule ×3 → STORMBOUND ×5), et le multiplicateur s'applique aux gains suivants.</li>
-        <li><b>Storm Charge :</b> chaque ⚡ remplit un quart de la jauge. À 2 ⚡ puis à 3 ⚡, un événement aléatoire se produit : Éclair, Rafale, Pluie torrentielle ou Œil du cyclone.</li>
-        <li><b>Eye of the Storm :</b> 4 ⚡ dans un tour : silence… puis BOOM. 8 tours gratuits avec des Storm Wilds 🌀 collants (3 vies). La tempête ne redescend plus d'un tour gratuit à l'autre, et 4 nouveaux ⚡ ajoutent 3 tours.</li>
-        <li><b>Achat de bonus :</b> les boutons BONUS et SUPER lancent directement 4 tours gratuits avec le Gardien : Eye of the Storm (20× la mise, 1 à 2 Storm Wilds) ou Super Eye of the Storm (32× la mise, 2 à 3 Storm Wilds). RTP de l'achat ≈ 96 %. Le bonus gagné avec 4 ⚡ reste plus grand (8 tours).</li>
-        <li><b>Le Gardien 🐉 :</b> quand il apparaît, il devient Wild et frappe la grille. Pendant le bonus, il frappe à chaque tour et à chaque éclair. Au bout de 3 frappes au même endroit, la zone devient une <i>zone de tempête</i> : plus de ⚡, plus de symboles premium, et des Wilds.</li>
+        <li><b>Storm Charge :</b> chaque éclair remplit un quart de la jauge. À 2 puis à 3 éclairs, un événement aléatoire se produit : Éclair, Rafale, Pluie torrentielle ou Œil du cyclone.</li>
+        <li><b>Eye of the Storm :</b> 4 éclairs dans un tour : silence… puis BOOM. 8 tours gratuits avec des Storm Wilds collants (3 vies). La tempête ne redescend plus d'un tour gratuit à l'autre, et 4 nouveaux éclairs ajoutent 3 tours.</li>
+        <li><b>Achat de bonus :</b> les boutons BONUS et SUPER lancent directement 4 tours gratuits avec le Gardien : Eye of the Storm (20× la mise, 1 à 2 Storm Wilds) ou Super Eye of the Storm (32× la mise, 2 à 3 Storm Wilds). RTP de l'achat ≈ 96 %. Le bonus gagné avec 4 éclairs reste plus grand (8 tours).</li>
+        <li><b>Le Gardien :</b> quand il apparaît, il devient Wild et frappe la grille. Pendant le bonus, il frappe à chaque tour et à chaque éclair. Au bout de 3 frappes au même endroit, la zone devient une <i>zone de tempête</i> : plus d'éclairs, plus de symboles premium, et des Wilds.</li>
       </ul>
       <p class="note" id="mathInfo"></p>
       <p class="note">Prototype de démonstration : crédits fictifs, aucun argent réel.</p>
-    </details>
+      <button id="rulesClose">Fermer</button>
+    </div>
   </div>
 
   <div id="buyModal" hidden>

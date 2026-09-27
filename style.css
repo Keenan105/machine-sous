@@ -1051,3 +1051,33 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
   text-shadow: 0 0 14px rgba(180, 225, 255, 0.95), 0 3px 4px rgba(0, 0, 0, 0.6);
 }
 @media (max-width: 520px) { #spin .spin-t { font-size: 70px; } }
+
+/* rules: a small round button at the bottom right, away from the grid */
+#rulesBtn {
+  position: fixed;
+  z-index: 8;
+  right: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  width: 52px;
+  height: 52px;
+}
+#rulesBtn svg { width: 28px; height: 28px; }
+#rulesModal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(2, 4, 12, 0.72);
+  backdrop-filter: blur(4px);
+}
+#rulesModal[hidden] { display: none; }
+.rules-card { width: min(760px, 100%); font-size: 13px; }
+.rules-card #paytable { margin-top: 0; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+/* no room beside the machine: the button sits at the bottom right of the page, under the message bar */
+@media (max-width: 1100px) {
+  #rulesBtn { position: relative; right: auto; bottom: auto; align-self: flex-end; }
+}
+#rulesClose { align-self: center; }
