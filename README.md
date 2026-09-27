@@ -3,12 +3,34 @@
 Prototype jouable d'une machine à sous au thème de tempête fantastique (HTML/CSS/JS, sans dépendance).
 
 **Lancer :** ouvrir `index.html` dans un navigateur, puis cliquer sur SPIN (ou appuyer sur Espace).
+**Tester le bonus :** dans la console du navigateur, `stormbound.bonus()`.
+
+## Architecture
+- `engine.js` : moteur mathématique sans affichage. `spin(mise, rng)` calcule le résultat complet d'une mise (tour de base, cascades, événements et tours gratuits) et renvoie la liste des étapes. **Chaque mise est indépendante**, aucun état ne passe d'une mise à l'autre.
+- `game.js` : interface, décor animé et son. La page ne calcule aucun gain : elle rejoue les étapes du moteur.
+- `simulate.js` : mesure le RTP avec le même moteur : `node simulate.js 1000000 42`.
+
+## Mathématiques (réglages actuels, `CONFIG` dans engine.js)
+| Mesure | Valeur (simulation 4 M de mises) |
+|---|---|
+| RTP | ≈ 96 % (± 0,5 %) |
+| Fréquence de gain | ≈ 27,8 % (1 tour sur 3,6) |
+| Répartition du RTP | ≈ 58 % jeu de base, ≈ 38 % bonus |
+| Eye of the Storm | ≈ 1 mise sur 240, gain moyen ≈ ×90 |
+| Gain max | plafonné à ×5000 la mise |
+
+`payScale` multiplie toute la table des gains, et le RTP lui est proportionnel : c'est le bouton pour recaler le RTP.
 
 ## Mécaniques
-- **Grille 6×5, gains partout :** 8 symboles identiques ou plus. Les gagnants explosent et d'autres tombent en cascade.
-- **Météo évolutive :** Pluie → Vent → Orage → Supercellule → Stormbound, avec des multiplicateurs de ×1 à ×3. Le visuel (pluie, vent, arbres, éclairs, cyclone, ciel déchaîné) et le son (pluie, vent, grondement, tonnerre) suivent le niveau.
-- **Storm Charge :** ⚡ = +7, cascade = +3. Aux paliers 25/50/75, un événement aléatoire : Éclair, Rafale, Pluie torrentielle ou Œil du cyclone.
-- **Eye of the Storm :** à 100, silence puis BOOM. L'œil pose des Storm Wilds collants pendant 3 cascades.
-- **Gardien de la Tempête 🐉 :** il frappe une zone à chaque tour. Après 3 frappes, la zone devient une *zone de tempête* (plus de ⚡, plus de premiums, des Wilds).
+- **Grille 6×5, gains partout :** 8 symboles identiques ou plus (dont au moins 4 vrais symboles), avec des cascades.
+- **Météo :** chaque tour repart de la Pluie, et chaque cascade gagnante fait monter la tempête et le multiplicateur (×1 → ×1,5 → ×2 → ×3 → ×5).
+- **Storm Charge :** chaque ⚡ vaut un quart de la jauge. À 2 ⚡ et à 3 ⚡, un événement (Éclair, Rafale, Pluie torrentielle, Œil du cyclone). À 4 ⚡, l'Eye of the Storm.
+- **Eye of the Storm :** 8 tours gratuits avec des Storm Wilds collants. La tempête persiste d'un tour gratuit à l'autre, et 4 nouveaux ⚡ ajoutent 3 tours.
+- **Gardien 🐉 :** il devient Wild et frappe la grille. En bonus, il frappe à chaque tour. Après 3 frappes, la zone devient une *zone de tempête*.
 
-Crédits fictifs uniquement. Pour tester depuis la console : `stormbound.state.charge = 99`.
+## Avant une publication réelle (Stake ou autre)
+- Les résultats doivent venir du serveur du casino (RGS) avec un aléa certifié, jamais de `Math.random` ou `crypto` dans le navigateur.
+- Le RTP doit être vérifié sur beaucoup plus de tours (centaines de millions), ou calculé à partir des tables de résultats pré-calculés du fournisseur, puis certifié.
+- Les symboles emoji sont des marqueurs à remplacer par de vrais visuels.
+
+Crédits fictifs uniquement.

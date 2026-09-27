@@ -1,104 +1,49 @@
 'use strict';
 
 /* =========================================================
-   STORMBOUND — La Tempête des Anciens
-   Grille 6×5, gains partout (8+), cascades, météo évolutive,
-   Storm Charge, Eye of the Storm, Gardien de la Tempête.
+   STORMBOUND — La Tempête des Anciens (interface)
+   Les résultats viennent uniquement de engine.js :
+   cette page rejoue les étapes calculées par le moteur.
    ========================================================= */
 
-const COLS = 6;
-const ROWS = 5;
-const MIN_WIN = 8;
+const { COLS, ROWS, SYMBOLS, LEVELS, CONFIG, zoneOf } = StormEngine;
+const BETS = [0.2, 0.5, 1, 2, 5, 10, 20, 50];
 
-const SYMBOLS = {
-  leaf:    { e: '🍃', name: 'Feuille',  w: 14, pay: [0.25, 0.75, 2] },
-  drop:    { e: '💧', name: 'Goutte',   w: 14, pay: [0.25, 0.75, 2] },
-  rock:    { e: '🪨', name: 'Roche',    w: 13, pay: [0.3, 0.9, 2.5] },
-  ice:     { e: '❄️', name: 'Givre',    w: 13, pay: [0.3, 0.9, 2.5] },
-  wolf:    { e: '🐺', name: 'Loup',     w: 9,  pay: [0.5, 1.5, 5] },
-  eagle:   { e: '🦅', name: 'Aigle',    w: 7,  pay: [0.8, 2, 8] },
-  trident: { e: '🔱', name: 'Trident',  w: 5,  pay: [1, 4, 12] },
-  crown:   { e: '👑', name: 'Couronne', w: 3,  pay: [2, 6, 25] },
-  charge:  { e: '⚡', name: 'Charge',   w: 5 },
-  dragon:  { e: '🐉', name: 'Gardien',  w: 1.1 },
-  wild:    { e: '🌀', name: 'Storm Wild', w: 0 },
-  mystery: { e: '❔', name: 'Caché',    w: 0 },
+// Aléa de l'interface : crypto du navigateur. En production, le résultat vient du serveur du casino.
+const rng = () => {
+  const a = new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return a[0] / 4294967296;
 };
-const PAYING = ['leaf', 'drop', 'rock', 'ice', 'wolf', 'eagle', 'trident', 'crown'];
-const PREMIUM = ['wolf', 'eagle', 'trident', 'crown'];
-const SPAWNABLE = [...PAYING, 'charge', 'dragon'];
-
-const LEVELS = [
-  { name: 'Pluie',        icon: '🌧️', need: 0,  mult: 1 },
-  { name: 'Vent',         icon: '💨', need: 4,  mult: 1.25 },
-  { name: 'Orage',        icon: '⚡', need: 10, mult: 1.5 },
-  { name: 'Supercellule', icon: '🌪️', need: 18, mult: 2 },
-  { name: 'STORMBOUND',   icon: '🌩️', need: 28, mult: 3 },
-];
-const MAX_INTENSITY = 36;
-const THRESHOLDS = [25, 50, 75];
-const BETS = [1, 2, 5, 10, 20, 50];
-const WILD_LIFE = 3;
-const DRAGON_SPINS = 5;
 
 const state = {
   balance: 1000,
-  betIdx: 0,
-  charge: 0,
-  thresholdIdx: 0,
-  intensity: 0,
-  level: 0,
-  dragonSpins: 0,
-  zoneHits: [0, 0, 0],
-  stormZones: [false, false, false],
-  lastZone: -1,
+  betIdx: 2,
   busy: false,
   auto: false,
   spinWin: 0,
-  cascade: 0,
+  // affichage du tour en cours (mis à jour par les étapes du moteur)
+  level: 0,
+  intensity: 0,
+  charge: 0,
+  thresholdIdx: 0,
+  dragon: false,
+  zoneHits: [0, 0, 0],
+  stormZones: [false, false, false],
+  inBonus: false,
 };
 
 const $ = (s) => document.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rand = (n) => Math.floor(Math.random() * n);
-const key = (c, r) => c + ',' + r;
-const zoneOf = (c) => Math.floor(c / 2);
-const fmt = (n) => (Math.round(n * 100) / 100).toLocaleString('fr-CH', { maximumFractionDigits: 2 });
+const fmt = (n) => (Math.round(n * 100) / 100).toLocaleString('fr-CH', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 const bet = () => BETS[state.betIdx];
-const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-
-function pickWeighted(entries) {
-  let total = 0;
-  for (const [, w] of entries) total += w;
-  let x = Math.random() * total;
-  for (const [k, w] of entries) { x -= w; if (x <= 0) return k; }
-  return entries[entries.length - 1][0];
-}
+const isSticky = (cell) => cell.s === 'wild' && cell.life > 0;
+const ZONE_NAMES = ['I', 'II', 'III'];
 
 /* ------------------------- grid ------------------------- */
 
-let uid = 0;
-const newCell = (s, life = 0) => ({ s, life, id: ++uid });
-const isSticky = (cell) => cell.s === 'wild' && cell.life > 0;
-
-function genSymbol(c) {
-  const storm = state.stormZones[zoneOf(c)];
-  const entries = SPAWNABLE.map((k) => {
-    let w = SYMBOLS[k].w;
-    if (k === 'dragon' && state.dragonSpins > 0) w = 0.3;
-    if (storm && k === 'charge') w *= 2;
-    if (storm && PREMIUM.includes(k)) w *= 1.6;
-    return [k, w];
-  });
-  if (storm) entries.push(['wild', 2.5]);
-  return pickWeighted(entries);
-}
-
-const grid = [];
-for (let c = 0; c < COLS; c++) {
-  grid.push([]);
-  for (let r = 0; r < ROWS; r++) grid[c].push(newCell(pickWeighted(PAYING.map((k) => [k, SYMBOLS[k].w]))));
-}
+let grid = StormEngine.randomGrid(rng);
 
 const board = $('#board');
 const cellEls = [];
@@ -129,13 +74,8 @@ function paintCell(c, r, anim, delay = 0) {
   }
 }
 
-function paintAll(anim) {
-  for (let c = 0; c < COLS; c++) {
-    for (let r = 0; r < ROWS; r++) {
-      const fresh = anim && !isSticky(grid[c][r]);
-      paintCell(c, r, fresh ? anim : null, fresh ? c * 55 + (ROWS - r) * 25 : 0);
-    }
-  }
+function paintAll() {
+  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) paintCell(c, r);
 }
 
 function flashCells(list, cls) {
@@ -147,60 +87,11 @@ function flashCells(list, cls) {
   }
 }
 
-// Remove cells, let the rest fall around sticky wilds, fill from the top.
-async function refill(removed, gen = genSymbol) {
-  const newPos = [];
-  const moved = [];
-  for (let c = 0; c < COLS; c++) {
-    const slots = [];
-    for (let r = 0; r < ROWS; r++) if (!isSticky(grid[c][r])) slots.push(r);
-    const kept = [];
-    for (let i = slots.length - 1; i >= 0; i--) {
-      const r = slots[i];
-      if (!removed.has(key(c, r))) kept.push({ cell: grid[c][r], from: r });
-    }
-    let k = 0;
-    for (let i = slots.length - 1; i >= 0; i--) {
-      const r = slots[i];
-      if (k < kept.length) {
-        const { cell, from } = kept[k++];
-        grid[c][r] = cell;
-        if (from !== r) moved.push([c, r]);
-      } else {
-        grid[c][r] = newCell(gen(c));
-        newPos.push([c, r]);
-      }
-    }
-  }
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) paintCell(c, r);
-  for (const [c, r] of moved) paintCell(c, r, 'fall', c * 20);
-  for (const [c, r] of newPos) paintCell(c, r, 'drop', c * 40 + (ROWS - r) * 30);
-  await sleep(520);
-  return newPos;
-}
-
-function randomCells(n, filter) {
-  const all = [];
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) if (filter(grid[c][r], c, r)) all.push([c, r]);
-  return shuffle(all).slice(0, n);
-}
-
-function mostCommonPaying() {
-  const counts = {};
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
-    const s = grid[c][r].s;
-    if (PAYING.includes(s)) counts[s] = (counts[s] || 0) + 1;
-  }
-  let best = PAYING[rand(PAYING.length)], n = -1;
-  for (const s of PAYING) if ((counts[s] || 0) > n) { n = counts[s] || 0; best = s; }
-  return best;
-}
-
 /* ------------------------- UI ------------------------- */
 
 function updateUI() {
   $('#balance').textContent = fmt(state.balance);
-  $('#bet').textContent = bet();
+  $('#bet').textContent = fmt(bet());
   $('#win').textContent = fmt(state.spinWin);
   $('#spin').disabled = state.busy;
   $('#auto').classList.toggle('on', state.auto);
@@ -208,7 +99,7 @@ function updateUI() {
 
 function updateGauge() {
   $('#gauge .fill').style.width = state.charge + '%';
-  $('#chargeVal').textContent = Math.floor(state.charge);
+  $('#chargeVal').textContent = Math.round(state.charge / CONFIG.chargePerBolt);
   document.querySelectorAll('.track i').forEach((el, i) => el.classList.toggle('hit', i < state.thresholdIdx));
 }
 
@@ -233,11 +124,16 @@ function updateZonesUI() {
   });
   document.querySelectorAll('.zone').forEach((el) => el.classList.toggle('storm', state.stormZones[+el.dataset.z]));
   const ds = $('#dragonStatus');
-  ds.classList.toggle('active', state.dragonSpins > 0);
-  ds.textContent = state.dragonSpins > 0
-    ? `🐉 Le Gardien veille : encore ${state.dragonSpins} tour${state.dragonSpins > 1 ? 's' : ''}`
-    : 'Gardien endormi (🐉 pour l\'invoquer)';
-  $('#dragon').classList.toggle('active', state.dragonSpins > 0);
+  ds.classList.toggle('active', state.dragon);
+  ds.textContent = state.dragon ? '🐉 Le Gardien veille et frappe à chaque éclair' : 'Gardien endormi (🐉 pour l\'invoquer)';
+  $('#dragon').classList.toggle('active', state.dragon);
+}
+
+function setFreeSpins(text) {
+  const el = $('#fsBar');
+  el.hidden = !text;
+  el.textContent = text || '';
+  document.body.classList.toggle('bonus', !!text);
 }
 
 let bannerTimer = 0;
@@ -271,227 +167,211 @@ function strike(el, power = 1) {
   fx.flash = Math.max(fx.flash, 0.35 * power);
 }
 
-/* ------------------------- weather level ------------------------- */
-
-function updateLevel(announce = true) {
-  let lvl = 0;
-  for (let i = 0; i < LEVELS.length; i++) if (state.intensity >= LEVELS[i].need) lvl = i;
+function showLevel(level, intensity, announce) {
   const prev = state.level;
-  if (lvl !== prev) {
-    state.level = lvl;
-    document.body.dataset.level = lvl;
-    audio.setLevel(lvl);
-    if (announce && lvl > prev) {
-      const L = LEVELS[lvl];
-      banner(`${L.icon} ${L.name.toUpperCase()} ×${L.mult}`);
-      if (lvl >= 2) { fx.flash = 0.6; audio.thunder(0.8); }
-    } else if (announce) {
-      say(`La tempête retombe… ${LEVELS[lvl].icon} ${LEVELS[lvl].name}`);
-    }
+  state.intensity = intensity;
+  state.level = level;
+  document.body.dataset.level = level;
+  if (level !== prev) audio.setLevel(level);
+  if (announce && level > prev) {
+    const L = LEVELS[level];
+    banner(`${L.icon} ${L.name.toUpperCase()} ×${L.mult}`);
+    if (level >= 2) { fx.flash = 0.6; audio.thunder(0.8); }
   }
   updateWeatherUI();
 }
 
-/* ------------------------- charge & landings ------------------------- */
+/* ------------------------- replay of engine steps ------------------------- */
 
-function addCharge(v) {
-  state.charge = Math.min(100, state.charge + v);
-  updateGauge();
-}
+const EVENT_NAMES = {
+  lightning: '⚡ ÉCLAIR',
+  gust: '💨 RAFALE',
+  downpour: '🌧️ PLUIE TORRENTIELLE',
+  eye: '👁️ ŒIL DU CYCLONE',
+};
 
-async function handleLanding(pos) {
-  const dragons = pos.filter(([c, r]) => grid[c][r].s === 'dragon');
-  if (dragons.length) {
-    summonDragon();
-    for (const [c, r] of dragons) {
-      grid[c][r] = newCell('wild');
-      paintCell(c, r, 'struck');
+async function play(step) {
+  switch (step.type) {
+    case 'start':
+      state.charge = 0;
+      state.thresholdIdx = 0;
+      state.dragon = false;
+      state.zoneHits = [0, 0, 0];
+      state.stormZones = [false, false, false];
+      showLevel(0, 0, false);
+      updateGauge();
+      updateZonesUI();
+      break;
+
+    case 'fill': {
+      grid = step.grid;
+      const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
+      for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
+        if (landed.has(c + ',' + r)) paintCell(c, r, 'drop', c * 55 + (ROWS - r) * 25);
+        else paintCell(c, r);
+      }
+      audio.whoosh();
+      await sleep(700);
+      break;
     }
-    await sleep(700);
-  }
-  const charges = pos.filter(([c, r]) => grid[c][r].s === 'charge');
-  if (charges.length) {
-    flashCells(charges, 'absorb');
-    audio.zap(charges.length);
-    addCharge(charges.length * 7);
-    await sleep(460);
-    const np = await refill(new Set(charges.map(([c, r]) => key(c, r))));
-    await handleLanding(np);
-  }
-}
 
-async function processCharge() {
-  if (state.thresholdIdx < THRESHOLDS.length && state.charge >= THRESHOLDS[state.thresholdIdx]) {
-    state.thresholdIdx++;
-    updateGauge();
-    await randomEvent();
-    return true;
-  }
-  if (state.charge >= 100) {
-    await eyeOfTheStorm();
-    state.charge = 0;
-    state.thresholdIdx = 0;
-    updateGauge();
-    return true;
-  }
-  return false;
-}
+    case 'refill':
+      grid = step.grid;
+      paintAll();
+      for (const [c, r] of step.moved) paintCell(c, r, 'fall', c * 20);
+      for (const [c, r] of step.landed) paintCell(c, r, 'drop', c * 40 + (ROWS - r) * 30);
+      await sleep(520);
+      break;
 
-/* ------------------------- evaluation ------------------------- */
+    case 'absorb':
+      flashCells(step.cells, 'absorb');
+      audio.zap(step.cells.length);
+      await sleep(460);
+      break;
 
-function evaluate() {
-  const cells = {};
-  const wilds = [];
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
-    const s = grid[c][r].s;
-    if (s === 'wild') wilds.push([c, r]);
-    else if (PAYING.includes(s)) (cells[s] = cells[s] || []).push([c, r]);
-  }
-  const wins = [];
-  for (const s of PAYING) {
-    const list = cells[s] || [];
-    if (list.length >= 3 && list.length + wilds.length >= MIN_WIN) {
-      wins.push({ s, cells: list, total: list.length + wilds.length });
+    case 'charge':
+      state.charge = step.charge;
+      state.thresholdIdx = step.thresholdIdx;
+      updateGauge();
+      break;
+
+    case 'summon':
+      grid = step.grid;
+      state.dragon = true;
+      updateZonesUI();
+      for (const [c, r] of step.cells) paintCell(c, r, 'struck');
+      audio.roar();
+      banner('🐉 LE GARDIEN SE RÉVEILLE');
+      say('Le Gardien de la Tempête apparaît derrière la grille…');
+      await sleep(900);
+      break;
+
+    case 'strike': {
+      const dragon = $('#dragon');
+      dragon.classList.add('roar');
+      const zoneEl = document.querySelector(`.zone[data-z="${step.zone}"]`);
+      zoneEl.classList.remove('hitfx');
+      void zoneEl.offsetWidth;
+      zoneEl.classList.add('hitfx');
+      strike(zoneEl, 1.6);
+      audio.thunder(1.1);
+      await sleep(250);
+      dragon.classList.remove('roar');
+      state.zoneHits = step.zoneHits;
+      state.stormZones = step.stormZones;
+      grid = step.grid;
+      paintAll();
+      for (const [c, r] of step.cells) paintCell(c, r, 'struck');
+      updateZonesUI();
+      const zn = ZONE_NAMES[step.zone];
+      if (step.becameStorm) await banner(`🌩️ ZONE ${zn} : ZONE DE TEMPÊTE`);
+      say(`Le Gardien frappe la zone ${zn} (${step.stormZones[step.zone] ? 'zone de tempête' : step.zoneHits[step.zone] + '/3'})`);
+      await sleep(400);
+      break;
     }
-  }
-  const removeSet = new Set();
-  const highlight = [];
-  if (wins.length) {
-    for (const w of wins) for (const [c, r] of w.cells) { removeSet.add(key(c, r)); highlight.push([c, r]); }
-    for (const [c, r] of wilds) {
-      highlight.push([c, r]);
-      if (!isSticky(grid[c][r])) removeSet.add(key(c, r));
-    }
-  }
-  return { wins, removeSet, highlight };
-}
 
-function payFor(win) {
-  const tier = win.total >= 12 ? 2 : win.total >= 10 ? 1 : 0;
-  return SYMBOLS[win.s].pay[tier] * bet();
-}
-
-async function cascadeLoop() {
-  for (let guard = 0; guard < 80; guard++) {
-    const { wins, removeSet, highlight } = evaluate();
-    if (wins.length) {
-      state.cascade++;
-      const mult = LEVELS[state.level].mult;
-      let amount = 0;
-      for (const w of wins) amount += payFor(w);
-      amount *= mult;
-      state.spinWin += amount;
-      state.balance += amount;
-      flashCells(highlight, 'win');
-      audio.chime(state.cascade);
-      floatText('+' + fmt(amount));
-      say(wins.map((w) => `${w.total}× ${SYMBOLS[w.s].e}`).join('  ·  ') +
-        `  →  +${fmt(amount)}` + (mult > 1 ? ` (météo ×${mult})` : '') +
-        (state.cascade > 1 ? `  · cascade ${state.cascade}` : ''));
+    case 'win': {
+      state.spinWin = step.total;
+      state.balance += step.amount;
+      flashCells(step.highlight, 'win');
+      audio.chime(step.cascade);
+      floatText('+' + fmt(step.amount));
+      say(step.wins.map((w) => `${w.total}× ${SYMBOLS[w.s].e}`).join('  ·  ') +
+        `  →  +${fmt(step.amount)}` + (step.mult > 1 ? ` (météo ×${step.mult})` : '') +
+        (step.cascade > 1 ? `  · cascade ${step.cascade}` : ''));
       updateUI();
       await sleep(760);
-      state.intensity = Math.min(MAX_INTENSITY, state.intensity + 1);
-      updateLevel();
-      addCharge(3);
-      // Storm Wilds last a limited number of cascades.
-      for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
-        const cell = grid[c][r];
-        if (isSticky(cell) && --cell.life === 0) removeSet.add(key(c, r));
+      break;
+    }
+
+    case 'intensity':
+      showLevel(step.level, step.intensity, true);
+      break;
+
+    case 'event':
+      await banner(EVENT_NAMES[step.name]);
+      if (step.name === 'lightning') {
+        audio.thunder(1);
+        grid = step.grid;
+        for (const [c, r] of step.cells) {
+          strike(cellEl(c, r), 0.8);
+          paintCell(c, r, 'struck');
+          await sleep(110);
+        }
+        say(`L'éclair transforme ${step.cells.length} cases en ${SYMBOLS[step.sym].e}`);
+        await sleep(450);
+      } else if (step.name === 'gust') {
+        audio.gust();
+        grid = step.grid;
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+          cellEl(c, r).style.setProperty('--sx', r % 2 === 0 ? '-100%' : '100%');
+          paintCell(c, r, 'slide');
+        }
+        await sleep(450);
+      } else if (step.name === 'downpour') {
+        audio.downpour();
+        fx.downpour = 3.5;
+        say(`Des rangées chargées de ${SYMBOLS[step.sym].e} s'abattent sur la grille`);
+      } else if (step.name === 'eye') {
+        audio.silence(0.35);
+        board.classList.add('slow');
+        for (const [c, r] of step.cells) {
+          cellEl(c, r).querySelector('.sym').textContent = SYMBOLS.mystery.e;
+          flashCells([[c, r]], 'hidden');
+        }
+        await sleep(1400);
+        grid = step.grid;
+        for (const [c, r] of step.cells) paintCell(c, r, 'reveal');
+        audio.chime(3);
+        board.classList.remove('slow');
+        audio.restore();
+        say(`L'œil révèle ${step.cells.length} symboles cachés : ${SYMBOLS[step.sym].e}`);
+        await sleep(500);
       }
-      const np = await refill(removeSet);
-      await handleLanding(np);
-      continue;
+      break;
+
+    case 'convert':
+      grid = step.grid;
+      for (const [c, r] of step.cells) paintCell(c, r, 'reveal');
+      say(`La rafale pousse les rangées et rassemble les ${SYMBOLS[step.sym].e}`);
+      await sleep(500);
+      break;
+
+    case 'bonusStart':
+      await eyeOfTheStorm(step);
+      break;
+
+    case 'freeSpin':
+      setFreeSpins(`🌀 EYE OF THE STORM · tour gratuit ${step.n} · encore ${step.left}`);
+      await sleep(350);
+      break;
+
+    case 'retrigger': {
+      await banner(`🌀 +${step.added} TOURS GRATUITS`);
+      fx.flash = 1;
+      audio.boom();
+      grid = step.grid;
+      for (const [c, r] of step.cells) paintCell(c, r, 'wildborn');
+      setFreeSpins(`🌀 EYE OF THE STORM · encore ${step.spinsLeft}`);
+      await sleep(600);
+      break;
     }
-    if (!(await processCharge())) break;
-  }
-}
 
-/* ------------------------- storm events ------------------------- */
+    case 'bonusEnd':
+      state.inBonus = false;
+      await banner(`🌀 BONUS : +${fmt(step.win)}`, 2000);
+      setFreeSpins('');
+      break;
 
-async function randomEvent() {
-  const events = [eventLightning, eventGust, eventDownpour, eventEyeOfCyclone];
-  await events[rand(events.length)]();
-}
-
-async function eventLightning() {
-  await banner('⚡ ÉCLAIR');
-  const target = Math.random() < 0.6 ? mostCommonPaying() : PREMIUM[rand(PREMIUM.length)];
-  const picks = randomCells(4 + rand(4), (cell) => cell.s !== target && cell.s !== 'wild');
-  audio.thunder(1);
-  for (const [c, r] of picks) {
-    strike(cellEl(c, r), 0.8);
-    grid[c][r] = newCell(target);
-    paintCell(c, r, 'struck');
-    await sleep(110);
+    case 'end':
+      break;
   }
-  say(`L'éclair transforme ${picks.length} cases en ${SYMBOLS[target].e}`);
-  await sleep(450);
-  if (state.dragonSpins > 0) await dragonStrike();
-}
-
-async function eventGust() {
-  await banner('💨 RAFALE');
-  audio.gust();
-  for (let r = 0; r < ROWS; r++) {
-    const dir = r % 2 === 0 ? 1 : -1;
-    const row = [];
-    for (let c = 0; c < COLS; c++) row.push(grid[c][r]);
-    for (let c = 0; c < COLS; c++) grid[(c + dir + COLS) % COLS][r] = row[c];
-    for (let c = 0; c < COLS; c++) {
-      cellEl(c, r).style.setProperty('--sx', dir > 0 ? '-100%' : '100%');
-      paintCell(c, r, 'slide');
-    }
-  }
-  await sleep(450);
-  const target = mostCommonPaying();
-  const picks = randomCells(3, (cell) => cell.s !== target && !isSticky(cell));
-  for (const [c, r] of picks) { grid[c][r] = newCell(target); paintCell(c, r, 'reveal'); }
-  say(`La rafale pousse les rangées et rassemble les ${SYMBOLS[target].e}`);
-  await sleep(500);
-}
-
-async function eventDownpour() {
-  await banner('🌧️ PLUIE TORRENTIELLE');
-  audio.downpour();
-  fx.downpour = 3.5;
-  const favored = pickWeighted([['wolf', 4], ['eagle', 3], ['trident', 2], ['crown', 1], [PAYING[rand(4)], 3]]);
-  const removed = new Set();
-  for (let c = 0; c < COLS; c++) {
-    let n = 0;
-    for (let r = ROWS - 1; r >= 0 && n < 2; r--) {
-      if (!isSticky(grid[c][r])) { removed.add(key(c, r)); n++; }
-    }
-  }
-  const np = await refill(removed, (c) => (Math.random() < 0.45 ? favored : genSymbol(c)));
-  say(`Deux rangées de ${SYMBOLS[favored].e} s'abattent sur la grille`);
-  await handleLanding(np);
-}
-
-async function eventEyeOfCyclone() {
-  await banner('👁️ ŒIL DU CYCLONE');
-  audio.silence(0.35);
-  board.classList.add('slow');
-  const picks = randomCells(5 + rand(4), (cell) => !isSticky(cell));
-  for (const [c, r] of picks) {
-    grid[c][r] = newCell('mystery');
-    paintCell(c, r, 'hidden');
-  }
-  await sleep(1400);
-  const sym = pickWeighted([['wolf', 4], ['eagle', 3], ['trident', 2], ['crown', 1]]);
-  for (const [c, r] of picks) {
-    grid[c][r] = newCell(sym);
-    paintCell(c, r, 'reveal');
-  }
-  audio.chime(3);
-  board.classList.remove('slow');
-  audio.restore();
-  say(`L'œil révèle ${picks.length} symboles cachés : ${SYMBOLS[sym].e}`);
-  await sleep(500);
 }
 
 /* ------------------------- Eye of the Storm (bonus) ------------------------- */
 
-async function eyeOfTheStorm() {
+async function eyeOfTheStorm(step) {
+  state.inBonus = true;
   say('…');
   audio.silence(0);
   document.body.classList.add('hush');
@@ -518,75 +398,35 @@ async function eyeOfTheStorm() {
   await sleep(700);
 
   board.classList.remove('vanish');
+  state.dragon = true;
+  state.zoneHits = [0, 0, 0];
+  state.stormZones = [false, false, false];
+  updateZonesUI();
   await sleep(300);
-  const n = Math.min(7, 3 + Math.ceil(state.level / 2) + rand(2));
-  const picks = randomCells(n, (cell) => !isSticky(cell));
-  for (const [c, r] of picks) {
-    grid[c][r] = newCell('wild', WILD_LIFE);
-    const el = cellEl(c, r);
-    const p = centerOf(el);
+  grid = step.grid;
+  paintAll();
+  for (const [c, r] of step.cells) {
+    const p = centerOf(cellEl(c, r));
     fx.bolt(center.x, center.y, p.x, p.y, 0.6);
     paintCell(c, r, 'wildborn');
     audio.zap(1);
     await sleep(170);
   }
   $('#eye').classList.remove('show');
-  say(`${picks.length} Storm Wilds 🌀 restent en place pendant ${WILD_LIFE} cascades !`);
-  const up = LEVELS[Math.min(LEVELS.length - 1, state.level + 1)].need;
-  state.intensity = Math.max(state.intensity, up);
-  updateLevel();
-  await sleep(600);
-}
-
-/* ------------------------- Storm Guardian ------------------------- */
-
-function summonDragon() {
-  const was = state.dragonSpins > 0;
-  state.dragonSpins = was ? state.dragonSpins + 3 : DRAGON_SPINS;
-  updateZonesUI();
-  audio.roar();
-  banner(was ? '🐉 LE GARDIEN S\'ÉNERVE' : '🐉 LE GARDIEN SE RÉVEILLE');
-  say('Le Gardien de la Tempête apparaît derrière la grille…');
-}
-
-async function dragonStrike() {
-  let z = rand(3);
-  if (z === state.lastZone) z = (z + 1 + rand(2)) % 3;
-  state.lastZone = z;
-  const dragon = $('#dragon');
-  dragon.classList.add('roar');
-  const zoneEl = document.querySelector(`.zone[data-z="${z}"]`);
-  zoneEl.classList.remove('hitfx');
-  void zoneEl.offsetWidth;
-  zoneEl.classList.add('hitfx');
-  strike(zoneEl, 1.6);
-  audio.thunder(1.1);
-  await sleep(250);
-  dragon.classList.remove('roar');
-
-  if (!state.stormZones[z]) {
-    state.zoneHits[z]++;
-    if (state.zoneHits[z] >= 3) {
-      state.stormZones[z] = true;
-      updateZonesUI();
-      for (let c = z * 2; c < z * 2 + 2; c++) for (let r = 0; r < ROWS; r++) paintCell(c, r);
-      await banner(`🌩️ ZONE ${['I', 'II', 'III'][z]} : ZONE DE TEMPÊTE`);
-    }
-  }
-  updateZonesUI();
-
-  const picks = randomCells(2, (cell, c) => zoneOf(c) === z && !isSticky(cell));
-  for (const [c, r] of picks) { grid[c][r] = newCell('charge'); paintCell(c, r, 'struck'); }
-  say(`Le Gardien frappe la zone ${['I', 'II', 'III'][z]} (${state.stormZones[z] ? 'zone de tempête' : state.zoneHits[z] + '/3'})`);
-  await sleep(350);
-  await handleLanding(picks);
+  setFreeSpins(`🌀 EYE OF THE STORM · ${step.spins} tours gratuits`);
+  say(`${step.cells.length} Storm Wilds 🌀 restent en place, le Gardien veille pendant ${step.spins} tours gratuits !`);
+  await sleep(700);
 }
 
 /* ------------------------- spin ------------------------- */
 
-async function spin() {
+async function runResult(result) {
+  for (const step of result.steps) await play(step);
+}
+
+async function spin(forced) {
   if (state.busy) return;
-  if (state.balance < bet()) {
+  if (state.balance < bet() - 1e-9) {
     say('Solde insuffisant : baisse la mise.');
     state.auto = false;
     updateUI();
@@ -596,42 +436,21 @@ async function spin() {
   state.busy = true;
   state.balance -= bet();
   state.spinWin = 0;
-  state.cascade = 0;
   updateUI();
 
-  // Sticky wilds fade a little each spin, dragon tires.
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
-    const cell = grid[c][r];
-    if (isSticky(cell)) cell.life--;
-  }
-  if (state.dragonSpins > 0) state.dragonSpins--;
-  updateZonesUI();
+  const result = forced || StormEngine.spin(bet(), rng);
+  await runResult(result);
 
-  const landed = [];
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
-    if (!isSticky(grid[c][r])) { grid[c][r] = newCell(genSymbol(c)); landed.push([c, r]); }
-  }
-  paintAll('drop');
-  audio.whoosh();
-  await sleep(700);
-
-  await handleLanding(landed);
-  if (state.dragonSpins > 0) await dragonStrike();
-  await cascadeLoop();
-
-  if (state.spinWin === 0) {
-    state.intensity = Math.max(0, state.intensity - 1);
-    updateLevel();
-    if (!$('#msg').textContent.startsWith('La tempête')) say('Pas de combinaison… le vent faiblit.');
+  if (result.win === 0) {
+    say('Pas de combinaison… la tempête se calme.');
   } else {
-    const x = state.spinWin / bet();
-    if (x >= 50) banner(`💥 ÉNORME GAIN ×${fmt(x)}`, 2000);
-    else if (x >= 15) banner(`✨ GROS GAIN ×${fmt(x)}`, 1600);
+    const x = result.win / bet();
+    if (x >= 50) banner(`💥 ÉNORME GAIN ×${fmt(x)}`, 2200);
+    else if (x >= 15) banner(`✨ GROS GAIN ×${fmt(x)}`, 1700);
   }
-
   state.busy = false;
   updateUI();
-  if (state.auto) setTimeout(spin, 650);
+  if (state.auto) setTimeout(() => spin(), 700);
 }
 
 /* ------------------------- weather renderer ------------------------- */
@@ -974,7 +793,7 @@ function drawCloudLayer(back, lvl) {
 }
 
 function drawSkyDragon(lvl) {
-  const want = state.dragonSpins > 0 || lvl === 4 ? 1 : 0;
+  const want = state.dragon || lvl === 4 ? 1 : 0;
   scene.dragonA = lerp(scene.dragonA, want, 0.01);
   if (scene.dragonA < 0.02) return;
   scene.dragonX += 1.1 + wind;
@@ -1566,17 +1385,19 @@ const audio = {
 /* ------------------------- paytable & controls ------------------------- */
 
 function buildPaytable() {
-  const rows = PAYING.slice().reverse().map((k) => {
+  const x = (v) => fmt(v * CONFIG.payScale);
+  const rows = StormEngine.PAYING.slice().reverse().map((k) => {
     const s = SYMBOLS[k];
-    return `<div class="pay"><span class="e">${s.e}</span><div><b>${s.name}</b><small>8-9 : ×${s.pay[0]} · 10-11 : ×${s.pay[1]}<br>12+ : ×${s.pay[2]}</small></div></div>`;
+    return `<div class="pay"><span class="e">${s.e}</span><div><b>${s.name}</b><small>8-9 : ×${x(s.pay[0])} · 10-11 : ×${x(s.pay[1])}<br>12+ : ×${x(s.pay[2])}</small></div></div>`;
   });
   rows.push(`<div class="pay"><span class="e">🌀</span><div><b>Storm Wild</b><small>Remplace tout symbole payant</small></div></div>`);
-  rows.push(`<div class="pay"><span class="e">⚡</span><div><b>Charge</b><small>+7 Storm Charge</small></div></div>`);
-  rows.push(`<div class="pay"><span class="e">🐉</span><div><b>Gardien</b><small>Invoque le dragon, devient Wild</small></div></div>`);
+  rows.push(`<div class="pay"><span class="e">⚡</span><div><b>Charge</b><small>2 ⚡ et 3 ⚡ : événement<br>4 ⚡ : Eye of the Storm</small></div></div>`);
+  rows.push(`<div class="pay"><span class="e">🐉</span><div><b>Gardien</b><small>Devient Wild et frappe la grille</small></div></div>`);
   $('#paytable').innerHTML = rows.join('');
+  $('#mathInfo').textContent = `RTP théorique ≈ 96 % (simulation) · gain max ×${CONFIG.maxWinX} la mise · valeurs de la table en multiples de la mise.`;
 }
 
-$('#spin').addEventListener('click', spin);
+$('#spin').addEventListener('click', () => spin());
 $('#betUp').addEventListener('click', () => { if (!state.busy) { state.betIdx = Math.min(BETS.length - 1, state.betIdx + 1); updateUI(); } });
 $('#betDown').addEventListener('click', () => { if (!state.busy) { state.betIdx = Math.max(0, state.betIdx - 1); updateUI(); } });
 $('#auto').addEventListener('click', () => { state.auto = !state.auto; updateUI(); if (state.auto) spin(); });
@@ -1593,5 +1414,13 @@ updateWeatherUI();
 updateZonesUI();
 requestAnimationFrame(frame);
 
-// Test hook: window.stormbound exposes state for quick tweaking in the console.
-window.stormbound = { state, addCharge, updateLevel, spin };
+// Test hook (console) : stormbound.bonus() joue un tour qui déclenche l'Eye of the Storm.
+window.stormbound = {
+  state,
+  spin,
+  bonus() {
+    let r;
+    do r = StormEngine.spin(bet(), rng); while (!r.bonus);
+    return spin(r);
+  },
+};

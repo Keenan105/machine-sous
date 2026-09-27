@@ -30,13 +30,15 @@
     </section>
 
     <section id="gauge" aria-label="Storm Charge">
-      <div class="label">⚡ Storm Charge <b id="chargeVal">0</b>/100</div>
+      <div class="label">⚡ Storm Charge <b id="chargeVal">0</b>/4 ⚡</div>
       <div class="track">
         <div class="fill"></div>
-        <i style="left:25%"></i><i style="left:50%"></i><i style="left:75%"></i>
+        <i style="left:50%"></i><i style="left:75%"></i>
         <em class="eye-mark">🌀</em>
       </div>
     </section>
+
+    <div id="fsBar" hidden></div>
 
     <section id="boardWrap">
       <div id="dragon" aria-hidden="true">🐉</div>
@@ -76,17 +78,19 @@
       <summary>Règles &amp; table des gains</summary>
       <div id="paytable"></div>
       <ul class="rules">
-        <li><b>Gains partout :</b> 8 symboles identiques ou plus, n'importe où sur la grille 6×5. Les symboles gagnants explosent et d'autres tombent en cascade.</li>
-        <li><b>Météo :</b> chaque cascade renforce la tempête (Pluie → Vent → Orage → Supercellule → Stormbound) et augmente le multiplicateur. Un tour sans gain la calme un peu.</li>
-        <li><b>Storm Charge :</b> chaque ⚡ ajoute 7 de charge et chaque cascade en ajoute 3. À 25, 50 et 75, un événement aléatoire se produit : Éclair, Rafale, Pluie torrentielle ou Œil du cyclone.</li>
-        <li><b>Eye of the Storm :</b> à 100, silence… puis BOOM. L'œil du cyclone pose des Storm Wilds 🌀 qui restent en place pendant 3 cascades (chaque cascade gagnante ou nouveau tour use une charge).</li>
-        <li><b>Le Gardien 🐉 :</b> il apparaît pendant 5 tours et frappe une zone à chaque éclair. Au bout de 3 frappes au même endroit, la zone devient une <i>zone de tempête</i> : plus de ⚡, plus de symboles premium, et des Wilds.</li>
+        <li><b>Gains partout :</b> 8 symboles identiques ou plus, n'importe où sur la grille 6×5 (Wilds compris, avec au moins 4 vrais symboles). Les gagnants explosent et d'autres tombent en cascade.</li>
+        <li><b>Météo :</b> chaque tour commence sous la Pluie. Chaque cascade gagnante renforce la tempête (Vent ×1,5 → Orage ×2 → Supercellule ×3 → STORMBOUND ×5), et le multiplicateur s'applique aux gains suivants.</li>
+        <li><b>Storm Charge :</b> chaque ⚡ remplit un quart de la jauge. À 2 ⚡ puis à 3 ⚡, un événement aléatoire se produit : Éclair, Rafale, Pluie torrentielle ou Œil du cyclone.</li>
+        <li><b>Eye of the Storm :</b> 4 ⚡ dans un tour : silence… puis BOOM. 8 tours gratuits avec des Storm Wilds 🌀 collants (3 vies). La tempête ne redescend plus d'un tour gratuit à l'autre, et 4 nouveaux ⚡ ajoutent 3 tours.</li>
+        <li><b>Le Gardien 🐉 :</b> quand il apparaît, il devient Wild et frappe la grille. Pendant le bonus, il frappe à chaque tour et à chaque éclair. Au bout de 3 frappes au même endroit, la zone devient une <i>zone de tempête</i> : plus de ⚡, plus de symboles premium, et des Wilds.</li>
       </ul>
+      <p class="note" id="mathInfo"></p>
       <p class="note">Prototype de démonstration : crédits fictifs, aucun argent réel.</p>
     </details>
   </div>
 
   <canvas id="fx"></canvas>
+  <script src="engine.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

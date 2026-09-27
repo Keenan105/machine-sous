@@ -426,3 +426,18 @@ body[data-level="4"] h1 { background: linear-gradient(180deg, #fff 10%, #ff9fb3 
   #spin { order: -1; width: 100%; }
   .step small { font-size: 8.5px; }
 }
+
+/* free spins */
+#fsBar {
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-family: Cinzel, Georgia, serif;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #eaf6ff;
+  background: linear-gradient(90deg, rgba(43, 108, 255, 0.35), rgba(127, 211, 255, 0.45), rgba(43, 108, 255, 0.35));
+  border: 1px solid rgba(127, 211, 255, 0.6);
+  box-shadow: 0 0 24px rgba(127, 211, 255, 0.35);
+}
+body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0 36px rgba(127, 211, 255, 0.3); }
