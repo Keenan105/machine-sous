@@ -19,11 +19,13 @@ Prototype jouable d'une machine à sous au thème de tempête fantastique (HTML/
 | Eye of the Storm | ≈ 1 mise sur 240, gain moyen ≈ ×90 |
 | Gain max | plafonné à ×5000 la mise |
 
-### Achat de bonus (bouton BONUS)
-| Achat | Prix | RTP (simulation 120 000 achats) |
-|---|---|---|
-| Eye of the Storm : 2–3 Storm Wilds, départ au Vent | 88× la mise | ≈ 96,2 % |
-| Super Eye of the Storm : 4–5 Storm Wilds, départ à l'Orage ×2 | 141× la mise | ≈ 95,9 % |
+### Achat de bonus (boutons BONUS et SUPER)
+| Achat | Prix | Contenu | RTP (simulation) |
+|---|---|---|---|
+| Eye of the Storm | 20× la mise | 4 tours gratuits, 1–2 Storm Wilds, départ au Vent, Gardien actif | ≈ 96,0 % |
+| Super Eye of the Storm | 32× la mise | 4 tours gratuits, 2–3 Storm Wilds, départ au Vent, Gardien actif | ≈ 96,2 % |
+
+Le bonus gagné naturellement (4 ⚡) reste de 8 tours gratuits.
 
 Mesure : `node simulate.js --buy eye 100000`. Les prix sont dans `BONUS_BUYS` (engine.js). Attention, l'achat de bonus est interdit dans certains pays (Royaume-Uni par exemple) : à vérifier selon le casino.
 

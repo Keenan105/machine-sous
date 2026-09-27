@@ -69,8 +69,10 @@
 
   // Achats de bonus : prix en multiples de la mise, calés par simulation (simulate.js --buy).
   const BONUS_BUYS = {
-    eye:   { name: 'Eye of the Storm',       cost: 88,  wilds: [2, 3], startLevel: 1 },
-    super: { name: 'Super Eye of the Storm', cost: 141, wilds: [4, 5], startLevel: 2 },
+    // Valeur moyenne ≈ 19,2× la mise → RTP ≈ 96 % à 20×.
+    eye:   { name: 'Eye of the Storm',       cost: 20, spins: 4, wilds: [1, 2], wildChance: 0.37, startLevel: 1, dragon: true },
+    // Valeur moyenne ≈ 30,8× la mise → RTP ≈ 96 % à 32×.
+    super: { name: 'Super Eye of the Storm', cost: 32, spins: 4, wilds: [2, 3], wildChance: 0.47, startLevel: 1, dragon: true },
   };
 
   /* ---------- helpers ---------- */
@@ -371,7 +373,7 @@
 
   function placeStormWilds(ctx, n) {
     const cells = randomCells(ctx, n, (cell) => !isSticky(cell));
-    for (const [c, r] of cells) ctx.grid[c][r] = { s: 'wild', life: CONFIG.wildLife };
+    for (const [c, r] of cells) ctx.grid[c][r] = { s: 'wild', life: ctx.wildLife || CONFIG.wildLife };
     return cells;
   }
 
@@ -398,18 +400,21 @@
 
   function runBonus(ctx, opts = {}) {
     ctx.inBonus = true;
-    ctx.dragon = true;
-    ctx.spinsLeft = CONFIG.freeSpins;
+    ctx.dragon = opts.dragon !== false;
+    ctx.wildLife = opts.wildLife || CONFIG.wildLife;
+    ctx.spinsLeft = opts.spins || CONFIG.freeSpins;
     ctx.charge = 0;
     ctx.thresholdIdx = 0;
     ctx.zoneHits = [0, 0, 0];
     ctx.stormZones = [false, false, false];
     const [lo, hi] = opts.wilds || CONFIG.bonusWilds;
-    const cells = placeStormWilds(ctx, lo + randInt(ctx.rng, hi - lo + 1));
+    // wildChance: probability of getting the higher count (fine-tunes a bought bonus's value)
+    const nWilds = opts.wildChance != null ? (ctx.rng() < opts.wildChance ? hi : lo) : lo + randInt(ctx.rng, hi - lo + 1);
+    const cells = placeStormWilds(ctx, nWilds);
     const winBefore = ctx.win;
     push(ctx, { type: 'bonusStart', cells, spins: ctx.spinsLeft });
     setCharge(ctx, 0);
-    setIntensity(ctx, Math.max(ctx.intensity, LEVELS[opts.startLevel || 1].need));
+    setIntensity(ctx, Math.max(ctx.intensity, LEVELS[opts.startLevel ?? 1].need));
     let n = 0;
     while (ctx.spinsLeft > 0 && !capped(ctx)) {
       ctx.spinsLeft--;

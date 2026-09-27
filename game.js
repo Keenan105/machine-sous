@@ -648,8 +648,8 @@ async function spin(forced) {
 /* ------------------------- bonus buy ------------------------- */
 
 const BUY_INFO = {
-  eye: { icon: 'bonus', lines: ['8 tours gratuits', '2 à 3 Storm Wilds collants', 'Départ au Vent ×1,5', 'Le Gardien frappe à chaque tour'] },
-  super: { icon: 'super', lines: ['8 tours gratuits', '4 à 5 Storm Wilds collants', 'Départ à l\'Orage ×2', 'Le Gardien frappe à chaque tour'] },
+  eye: { icon: 'bonus', lines: ['4 tours gratuits', '1 à 2 Storm Wilds collants', 'Départ au Vent ×1,5', 'Le Gardien frappe à chaque tour'] },
+  super: { icon: 'super', lines: ['4 tours gratuits', '2 à 3 Storm Wilds collants', 'Départ au Vent ×1,5', 'Le Gardien frappe à chaque tour'] },
 };
 
 function renderOffers(only) {
