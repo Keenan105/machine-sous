@@ -307,7 +307,8 @@ function animateColumn(c, items, fallMs, lag = ROW_LAG) {
     el.classList.add('land');
     if (it.old) el.classList.add('leaving');
   }
-  setTimeout(() => audio.thud(items.length / ROWS), fallMs);
+  for (const it of items) setTimeout(() => audio.clack(it.r), (ROWS - 1 - it.r) * lag + fallMs);
+  setTimeout(() => audio.thud(0.6 * items.length / ROWS), fallMs);
 }
 
 const CLEAR_MS = 220;         // les symboles du tour précédent tombent hors de la grille
@@ -327,6 +328,7 @@ async function clearBoard(cells) {
     void el.offsetWidth;
     el.classList.add('leaving');
   }
+  audio.sweep();
   await sleep(CLEAR_MS + (COLS - 1) * CLEAR_STAGGER + 60);
 }
 
@@ -557,6 +559,7 @@ async function play(step) {
     case 'bonusEnd':
       state.inBonus = false;
       setFreeSpins('');
+      audio.stopMusic();
       await bonusCelebration(step.win, step.spins);
       break;
 
@@ -688,6 +691,7 @@ async function eyeOfTheStorm(step) {
   await sleep(500);
   $('#eye').classList.add('show');
   audio.restore();
+  audio.startMusic();
   await banner('EYE OF THE STORM', 1600);
   await sleep(700);
 
@@ -1937,6 +1941,103 @@ const audio = {
   restore() {
     if (this.ctx) this.ambient.gain.setTargetAtTime(1, this.ctx.currentTime, 0.4);
   },
+  clack(row = 2) {
+    if (!this.ctx) return;
+    // a small stone-on-stone knock; lower rows sound a touch deeper
+    const f = 2400 - row * 180 + Math.random() * 300;
+    this.burst(this.noise, 'bandpass', f, 0.07, 0.002, 0.05);
+    this.tone(260 - row * 14 + Math.random() * 20, 0.06, 0.07, 0, 'triangle', 150);
+  },
+  sweep() {
+    if (this.ctx) this.burst(this.noise, 'bandpass', 1600, 0.12, 0.02, 0.3, 0, 300);
+  },
+
+  // Bonus music: a looping i–VI–III–VII progression in D minor, generated live.
+  startMusic() {
+    if (!this.ctx || this.music) return;
+    const ctx = this.ctx;
+    const bus = ctx.createGain();
+    bus.gain.setValueAtTime(0.0001, ctx.currentTime);
+    bus.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 1.5);
+    bus.connect(this.master);
+    const m = { bus, step: 0, next: ctx.currentTime + 0.1, timer: 0 };
+    const STEP = 0.2;                                   // 16th notes at 75 BPM feel, 8 steps per chord
+    const chords = [
+      { bass: 73.42, notes: [293.66, 349.23, 440.0] },  // Dm
+      { bass: 58.27, notes: [233.08, 293.66, 349.23] }, // Bb
+      { bass: 87.31, notes: [349.23, 440.0, 523.25] },  // F
+      { bass: 65.41, notes: [261.63, 329.63, 392.0] },  // C
+    ];
+    const arp = [0, 1, 2, 1, 0, 2, 1, 2];
+    const note = (freq, when, dur, type, peak, cutoff) => {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.value = freq;
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = cutoff;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.linearRampToValueAtTime(peak, when + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      o.connect(f).connect(g).connect(bus);
+      o.start(when);
+      o.stop(when + dur + 0.05);
+    };
+    const kick = (when) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.setValueAtTime(130, when);
+      o.frequency.exponentialRampToValueAtTime(38, when + 0.18);
+      g.gain.setValueAtTime(0.55, when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.3);
+      o.connect(g).connect(bus);
+      o.start(when);
+      o.stop(when + 0.32);
+    };
+    const hat = (when, peak) => {
+      const src = ctx.createBufferSource();
+      src.buffer = this.noise;
+      const f = ctx.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = 7000;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(peak, when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.05);
+      src.connect(f).connect(g).connect(bus);
+      src.start(when, Math.random());
+      src.stop(when + 0.06);
+    };
+    const schedule = () => {
+      while (m.next < ctx.currentTime + 0.4) {
+        const t = m.next, i = m.step % 32, ch = chords[Math.floor(i / 8)], k = i % 8;
+        if (k === 0) {
+          ch.notes.forEach((n) => note(n / 2, t, STEP * 8, 'sawtooth', 0.035, 900));   // pad
+          note(ch.bass, t, STEP * 3, 'triangle', 0.3, 400);
+        }
+        if (k === 3 || k === 6) note(ch.bass, t, STEP * 2, 'triangle', 0.22, 400);
+        note(ch.notes[arp[k]] * 2, t, STEP * 1.6, 'triangle', 0.07, 3000);           // arpeggio
+        if (k === 0 || k === 4) kick(t);
+        hat(t, k % 2 ? 0.05 : 0.025);
+        m.step++;
+        m.next += STEP;
+      }
+    };
+    schedule();
+    m.timer = setInterval(schedule, 100);
+    this.music = m;
+  },
+  stopMusic() {
+    const m = this.music;
+    if (!m) return;
+    this.music = null;
+    clearInterval(m.timer);
+    const now = this.ctx.currentTime;
+    m.bus.gain.cancelScheduledValues(now);
+    m.bus.gain.setValueAtTime(m.bus.gain.value, now);
+    m.bus.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    setTimeout(() => m.bus.disconnect(), 1500);
+  },
   toggle() {
     this.on = !this.on;
     if (this.ctx) this.master.gain.setTargetAtTime(this.on ? 0.8 : 0, this.ctx.currentTime, 0.05);
@@ -1980,7 +2081,7 @@ $('#sound').addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (!$('#buyModal').hidden) { if (e.code === 'Escape') { if (pendingKind) showOffers(); else closeBuy(); } return; }
-  if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SUMMARY') { e.preventDefault(); spin(); }
+  if ((e.code === 'KeyT' || e.code === 'Space') && !e.repeat && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SUMMARY') { e.preventDefault(); spin(); }
 });
 
 buildPaytable();

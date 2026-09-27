@@ -1023,3 +1023,17 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
 #bonusWin.t5 .bw-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 90, 120, 0.2) 0deg 5deg, rgba(255, 200, 80, 0.12) 5deg 9deg, rgba(0, 0, 0, 0) 9deg 14deg); animation-duration: 7s; }
 #bonusWin.t4 .bw-tier, #bonusWin.t5 .bw-tier { background: linear-gradient(180deg, #ffffff 10%, #ffb3c2 45%, #ff4d73 75%, #8a1030); -webkit-background-clip: text; background-clip: text; }
 @media (prefers-reduced-motion: reduce) { .bw-rays, .bw-emblem { animation: none; } }
+
+/* key hint on the SPIN orb */
+#spin { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+#spin kbd {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 5px 3px;
+  border-radius: 4px;
+  color: #0b1d57;
+  background: linear-gradient(180deg, #ffffff, #c9dcff);
+  box-shadow: 0 2px 0 #6a86c8, 0 0 6px rgba(180, 225, 255, 0.8);
+}
