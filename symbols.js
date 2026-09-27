@@ -1,8 +1,8 @@
 /* =========================================================
-   STORMBOUND — illustrations vectorielles des symboles.
-   Un seul sprite SVG est injecté dans la page ; chaque case
-   l'affiche avec <use>. Pour passer à des images (PNG),
-   il suffit de changer symbolSVG().
+   STORMBOUND — symboles.
+   Les symboles utilisent les illustrations peintes de img/.
+   Le sprite SVG ci-dessous reste en secours (et pour le
+   symbole caché de l'Œil du cyclone).
    ========================================================= */
 (function () {
   'use strict';
@@ -132,5 +132,12 @@
   sprite += '</svg>';
   document.body.insertAdjacentHTML('afterbegin', sprite);
 
-  window.symbolSVG = (key) => `<svg class="art" viewBox="0 0 100 100" aria-hidden="true"><use href="#sym-${key}"/></svg>`;
+  // Illustrations peintes (img/*.webp) ; le dessin vectoriel sert de secours et pour le symbole caché.
+  const PAINTED = ['leaf', 'drop', 'rock', 'ice', 'wolf', 'eagle', 'trident', 'crown', 'wild', 'charge', 'dragon'];
+  const painted = new Set(PAINTED);
+  for (const k of PAINTED) { const i = new Image(); i.src = `img/${k}.webp`; }  // préchargement
+
+  window.symbolSVG = (key) => painted.has(key)
+    ? `<img class="art" src="img/${key}.webp" alt="" draggable="false">`
+    : `<svg class="art" viewBox="0 0 100 100" aria-hidden="true"><use href="#sym-${key}"/></svg>`;
 })();

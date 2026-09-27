@@ -492,6 +492,8 @@ body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0
 
 /* symbol artwork */
 .cell .sym .art { display: block; width: 1.6em; height: 1.6em; overflow: visible; }
+.cell .sym img.art { width: 1.95em; height: 1.95em; object-fit: contain; -webkit-user-drag: none; user-select: none; }
+.pay .e img.art { width: 40px; height: 40px; object-fit: contain; }
 .pay .e .art { width: 34px; height: 34px; display: block; }
 
 /* level transitions */
