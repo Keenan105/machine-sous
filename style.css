@@ -441,3 +441,8 @@ body[data-level="4"] h1 { background: linear-gradient(180deg, #fff 10%, #ff9fb3 
   box-shadow: 0 0 24px rgba(127, 211, 255, 0.35);
 }
 body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0 36px rgba(127, 211, 255, 0.3); }
+
+/* column-by-column drop */
+.cell.out .sym { animation: dropOut 0.17s ease-in forwards; }
+@keyframes dropOut { to { transform: translateY(170%); opacity: 0; } }
+.cell.drop .sym { animation-duration: 0.42s; }

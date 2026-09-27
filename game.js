@@ -181,6 +181,36 @@ function showLevel(level, intensity, announce) {
   updateWeatherUI();
 }
 
+/* ------------------------- column-by-column drop ------------------------- */
+
+const COL_STAGGER = 140;     // délai entre deux colonnes (ms)
+const ROW_STAGGER = 35;      // dans une colonne, la rangée du bas se pose en premier
+const REFILL_STAGGER = 90;   // cascades : délai entre colonnes
+const OUT_TIME = 170;        // les anciens symboles tombent hors de la grille
+
+// Chaque colonne vide ses anciens symboles puis reçoit les nouveaux, de gauche à droite.
+async function dropColumns(step) {
+  const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
+  const next = step.grid;
+  audio.whoosh();
+  const done = [];
+  for (let c = 0; c < COLS; c++) {
+    done.push(new Promise((resolve) => setTimeout(async () => {
+      for (let r = 0; r < ROWS; r++) if (landed.has(c + ',' + r)) flashCells([[c, r]], 'out');
+      await sleep(OUT_TIME);
+      for (let r = 0; r < ROWS; r++) {
+        grid[c][r] = next[c][r];
+        paintCell(c, r, landed.has(c + ',' + r) ? 'drop' : null, (ROWS - 1 - r) * ROW_STAGGER);
+      }
+      setTimeout(() => audio.thud(1), 300);
+      resolve();
+    }, c * COL_STAGGER)));
+  }
+  await Promise.all(done);
+  grid = next;
+  await sleep(420 + (ROWS - 1) * ROW_STAGGER);
+}
+
 /* ------------------------- replay of engine steps ------------------------- */
 
 const EVENT_NAMES = {
@@ -203,25 +233,22 @@ async function play(step) {
       updateZonesUI();
       break;
 
-    case 'fill': {
-      grid = step.grid;
-      const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
-      for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
-        if (landed.has(c + ',' + r)) paintCell(c, r, 'drop', c * 55 + (ROWS - r) * 25);
-        else paintCell(c, r);
-      }
-      audio.whoosh();
-      await sleep(700);
+    case 'fill':
+      await dropColumns(step);
       break;
-    }
 
-    case 'refill':
+    case 'refill': {
       grid = step.grid;
       paintAll();
-      for (const [c, r] of step.moved) paintCell(c, r, 'fall', c * 20);
-      for (const [c, r] of step.landed) paintCell(c, r, 'drop', c * 40 + (ROWS - r) * 30);
-      await sleep(520);
+      const cols = new Set([...step.moved, ...step.landed].map(([c]) => c));
+      const order = [...cols].sort((x, y) => x - y);
+      const colDelay = (c) => order.indexOf(c) * REFILL_STAGGER;
+      for (const [c, r] of step.moved) paintCell(c, r, 'fall', colDelay(c));
+      for (const [c, r] of step.landed) paintCell(c, r, 'drop', colDelay(c) + (ROWS - 1 - r) * ROW_STAGGER);
+      order.forEach((c) => setTimeout(() => audio.thud(0.5), colDelay(c) + 300));
+      await sleep(Math.max(0, order.length - 1) * REFILL_STAGGER + 520);
       break;
+    }
 
     case 'absorb':
       flashCells(step.cells, 'absorb');
@@ -1360,6 +1387,11 @@ const audio = {
     const scale = [392, 440, 523, 587, 659, 784, 880, 1047];
     const base = Math.min(step - 1, 5);
     [0, 2].forEach((o, i) => this.tone(scale[base + o], 0.12, 0.6, i * 0.07, 'triangle'));
+  },
+  thud(power = 1) {
+    if (!this.ctx) return;
+    this.tone(150, 0.22 * power, 0.16, 0, 'sine', 60);
+    this.burst(this.noise, 'lowpass', 900, 0.08 * power, 0.003, 0.06);
   },
   whoosh() { if (this.ctx) this.burst(this.noise, 'bandpass', 700, 0.15, 0.08, 0.35, 0, 2000); },
   gust() { if (this.ctx) this.burst(this.noise, 'bandpass', 300, 0.6, 0.3, 1.4, 0, 1200); },
