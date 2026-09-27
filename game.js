@@ -830,7 +830,16 @@ async function buyBonus(kind) {
 /* ------------------------- weather renderer ------------------------- */
 
 // Sky colours per level: [zenith, middle, horizon].
-const SKY = [
+// 'city': Los Angeles at dusk under the rain. 'mountains': the original valley with lake and ruins.
+const SCENERY = 'city';
+const CITY = SCENERY === 'city';
+const SKY = CITY ? [
+  [[22, 16, 52], [86, 36, 98], [214, 104, 72]],
+  [[16, 14, 42], [62, 30, 80], [160, 76, 66]],
+  [[10, 10, 28], [38, 24, 58], [98, 54, 66]],
+  [[6, 14, 18], [22, 42, 44], [74, 96, 76]],
+  [[14, 2, 10], [64, 8, 36], [160, 32, 52]],
+] : [
   [[20, 30, 46], [42, 56, 76], [86, 98, 116]],
   [[15, 22, 34], [34, 45, 62], [66, 76, 92]],
   [[8, 11, 21], [22, 28, 46], [48, 52, 74]],
@@ -918,10 +927,10 @@ const fx = {
 
 // Scenery state — drawn behind the UI.
 const scene = {
+  moon: CITY ? 0 : 0.9,
   flash: 0,        // landscape illumination from distant lightning
   bolts: [],
   tornado: 0,
-  moon: 0.9,
   dragonA: 0,
   dragonX: -400,
   rush: 0,         // speeds up sky changes during a level transition
@@ -1236,6 +1245,7 @@ function makeTree(x, h, kind) {
 let cloudSheets = [], pineSprites = [], deadSprites = [], fogSprite = null, vignettes = [];
 let BG_DPR = 1;
 let moonSprites = [], grainPattern = null, frontSprites = [];
+let city = null;
 
 // A full moon with maria, craters and limb darkening, pre-rendered once.
 function makeMoonSprite(r, red) {
@@ -1313,6 +1323,8 @@ function resize() {
   ];
   cloudSheets.forEach((sh) => (sh.x = rnd(0, 1000)));
 
+  if (!fogSprite) fogSprite = makeFogSprite();
+  if (CITY) { buildCity(); } else {
   ranges = [
     makeRange(H * 0.62, H * 0.26, 2.2, 1.7, true),
     makeRange(H * 0.74, H * 0.16, 3.4, 5.3, false),
@@ -1337,6 +1349,7 @@ function resize() {
   for (let i = 0; i < nf; i++) treesFront.push(makeTree((i + rnd(0, 0.8)) * (W / nf), rnd(90, 190), Math.random() < 0.12 ? 'dead' : 'pine'));
   treesFront.sort((a, b) => a.h - b.h);
   treesFront.forEach((tr) => (tr.front = true));
+  }
 
   grass = [];
   for (let x = 0; x < W; x += REDUCED ? 7 : 3.5) grass.push({ x: x + rnd(-1, 1), h: rnd(8, 22), p: rnd(0, 6) });
@@ -1379,7 +1392,7 @@ function drawSky(lvl) {
   bctx.fillRect(0, 0, W, H);
 
   // stars through the clouds when calm
-  const starA = Math.max(0, scene.moon - 0.4);
+  const starA = CITY ? 0 : Math.max(0, scene.moon - 0.4);
   if (starA > 0.01) {
     for (const s of stars) {
       bctx.fillStyle = `rgba(220,230,255,${starA * (0.4 + 0.6 * Math.abs(Math.sin(t * 1.3 + s.p)))})`;
@@ -1388,7 +1401,7 @@ function drawSky(lvl) {
   }
 
   // moon — fades as the storm swallows it, turns blood red at STORMBOUND
-  scene.moon = lerp(scene.moon, [0.9, 0.6, 0.25, 0.08, 0.55][lvl], 0.01);
+  scene.moon = lerp(scene.moon, (CITY ? [0, 0, 0, 0, 0.5] : [0.9, 0.6, 0.25, 0.08, 0.55])[lvl], 0.01);
   if (scene.moon > 0.02) {
     const mx = W * 0.8 - scene.px * 6, my = H * 0.17 - scene.py * 4, mr = Math.max(22, Math.min(W, H) * 0.045);
     const red = lvl === 4;
@@ -1836,9 +1849,13 @@ function ambientLightning(lvl) {
   // real strikes hitting the mountains
   const strikeChance = [0, 0, 0.003, 0.006, 0.013][lvl];
   if (Math.random() < strikeChance) {
-    const x = rnd(0.05, 0.95) * W;
-    const range = ranges[rand(2)];
-    scene.bolts.push(makeBolt(x + rnd(-80, 80), H * rnd(0.12, 0.25), x, ridgeY(range, x), 0.9));
+    let x = rnd(0.05, 0.95) * W;
+    let ty = ridgeY(ranges[rand(2)], x);
+    if (CITY && city && city.beacons.length > 1 && Math.random() < 0.6) {
+      const b = city.beacons[1 + rand(city.beacons.length - 1)];
+      x = b.x; ty = b.y;
+    }
+    scene.bolts.push(makeBolt(x + rnd(-80, 80), H * rnd(0.12, 0.25), x, ty, 0.9));
     scene.flash = Math.max(scene.flash, 0.9);
     scene.glows.push({ x, y: H * 0.15, r: 380, life: 1 });
     audio.thunder(0.5, 0.25 + Math.random() * 0.6);
@@ -1971,6 +1988,397 @@ function drawVignette(lvl) {
   bctx.fillRect(0, 0, W, H);
 }
 
+/* ------------------------- Los Angeles scenery ------------------------- */
+
+
+function hiCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(w * BG_DPR);
+  c.height = Math.ceil(h * BG_DPR);
+  const g = c.getContext('2d');
+  g.scale(BG_DPR, BG_DPR);
+  return [c, g];
+}
+
+// A palm as a black silhouette: slim curved trunk, drooping fronds with leaflets.
+function makePalmSprite(h, lean) {
+  const w = Math.round(h * 0.9);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = g.strokeStyle = '#000';
+  const bx = w / 2, topX = w / 2 + lean * h * 0.12, topY = h * 0.2;
+  // trunk: stacked discs along a curve, thinner at the top, with ring marks
+  for (let i = 0; i <= 120; i++) {
+    const u = i / 120;
+    const x = (1 - u) * (1 - u) * bx + 2 * (1 - u) * u * (bx + lean * h * 0.02) + u * u * topX;
+    const y = h - u * (h - topY);
+    const r = h * (0.02 - u * 0.009);
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+  // fronds
+  g.lineCap = 'round';
+  const n = 13;
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + ((i / (n - 1)) - 0.5) * Math.PI * 1.9 + rnd(-0.12, 0.12);
+    const len = h * rnd(0.2, 0.28);
+    const droop = Math.abs(Math.cos(a)) * 0.9 + 0.2;
+    const ex = topX + Math.cos(a) * len, ey = topY + Math.sin(a) * len * 0.45 + len * droop * 0.55;
+    const cx = topX + Math.cos(a) * len * 0.5, cy = topY + Math.sin(a) * len * 0.5 - len * 0.15;
+    g.lineWidth = Math.max(1.2, h * 0.006);
+    g.beginPath();
+    g.moveTo(topX, topY);
+    g.quadraticCurveTo(cx, cy, ex, ey);
+    g.stroke();
+    g.lineWidth = Math.max(0.7, h * 0.0025);
+    for (let k = 2; k < 22; k++) {
+      const u = k / 22;
+      const px = (1 - u) * (1 - u) * topX + 2 * (1 - u) * u * cx + u * u * ex;
+      const py = (1 - u) * (1 - u) * topY + 2 * (1 - u) * u * cy + u * u * ey;
+      const leaf = len * 0.2 * (1 - u * 0.6);
+      for (const side of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(px, py);
+        g.lineTo(px + side * leaf * 0.35 + Math.cos(a) * leaf * 0.3, py + leaf * 0.8);
+        g.stroke();
+      }
+    }
+  }
+  // dead fronds hanging under the crown
+  g.lineWidth = Math.max(1, h * 0.004);
+  for (let i = 0; i < 6; i++) {
+    const x = topX + rnd(-h * 0.03, h * 0.03);
+    g.beginPath();
+    g.moveTo(x, topY);
+    g.quadraticCurveTo(x + rnd(-8, 8), topY + h * 0.05, x + rnd(-6, 6), topY + h * rnd(0.07, 0.11));
+    g.stroke();
+  }
+  return { c, topX, topY };
+}
+
+function buildCity() {
+  const horizon = H * 0.64;
+  city = { horizon, beacons: [], cars: [], palms: [], midPalms: [] };
+
+  // Hollywood Hills: ridge profile (5px steps from -80, the layout ridgeY expects)
+  const pts = [];
+  for (let x = -80; x <= W + 80; x += 5) {
+    const u = x / W;
+    const n = ridged(u * 3.1, 4.2) * 0.65 + (fbm(u * 1.2, 9.1, 3) * 0.5 + 0.5) * 0.55;
+    const fall = 1 - smooth(0.42, 0.95, u) * 0.75;
+    pts.push([x, horizon - H * 0.22 * n * fall]);
+  }
+  ranges = [{ pts }, { pts }];
+  const hillPath = new Path2D();
+  hillPath.moveTo(-80, horizon + 30);
+  for (const [x, y] of pts) hillPath.lineTo(x, y);
+  hillPath.lineTo(W + 80, horizon + 30);
+  hillPath.closePath();
+  const [hc, hg] = hiCanvas(W, H);
+  const hgrad = hg.createLinearGradient(0, horizon - H * 0.22, 0, horizon + 30);
+  hgrad.addColorStop(0, '#221630');
+  hgrad.addColorStop(1, '#0d0a18');
+  hg.fillStyle = hgrad;
+  hg.fill(hillPath);
+  hg.save();
+  hg.clip(hillPath);
+  // texture: soft light and shade on the slopes
+  for (let i = 0; i < 260; i++) {
+    const x = rnd(0, W), y = rnd(horizon - H * 0.2, horizon + 20);
+    const r = rnd(20, 70);
+    const gr = hg.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, Math.random() < 0.5 ? 'rgba(255,150,120,0.035)' : 'rgba(0,0,0,0.08)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    hg.fillStyle = gr;
+    hg.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // houses lit up on the hillsides, denser near the foot
+  for (let i = 0; i < W * 1.4; i++) {
+    const x = rnd(0, W);
+    const top = ridgeY({ pts }, x);
+    const k = Math.pow(Math.random(), 0.6);
+    const y = top + 6 + k * (horizon + 20 - top);
+    const warm = Math.random() < 0.8;
+    hg.fillStyle = warm ? `rgba(255,${rand(40) + 180},${rand(60) + 110},${rnd(0.45, 0.95)})` : `rgba(210,225,255,${rnd(0.4, 0.8)})`;
+    const sz = rnd(0.7, 1.5);
+    hg.fillRect(x, y, sz, sz);
+  }
+  hg.restore();
+  hg.strokeStyle = 'rgba(255,150,120,0.22)';
+  hg.lineWidth = 1.1;
+  hg.beginPath();
+  pts.forEach(([x, y], i) => (i ? hg.lineTo(x, y) : hg.moveTo(x, y)));
+  hg.stroke();
+  // transmitter mast on the highest point of the left hills
+  let tx = W * 0.3, ty = H;
+  for (const [x, y] of pts) if (x > W * 0.15 && x < W * 0.45 && y < ty) { ty = y; tx = x; }
+  hg.strokeStyle = '#07050c';
+  hg.lineWidth = 1.4;
+  hg.beginPath();
+  hg.moveTo(tx - 4, ty + 2); hg.lineTo(tx, ty - H * 0.07); hg.lineTo(tx + 4, ty + 2);
+  hg.moveTo(tx - 2.5, ty - H * 0.03); hg.lineTo(tx + 2.5, ty - H * 0.03);
+  hg.stroke();
+  city.beacons.push({ x: tx, y: ty - H * 0.07, p: 0 });
+  city.hills = hc;
+
+  // basin: a carpet of city lights in perspective, with avenues converging
+  const [lc, lg] = hiCanvas(W, H);
+  const ground = lg.createLinearGradient(0, horizon - 6, 0, H);
+  ground.addColorStop(0, '#1c1226');
+  ground.addColorStop(0.25, '#110b1a');
+  ground.addColorStop(1, '#06040b');
+  lg.fillStyle = ground;
+  lg.fillRect(0, horizon - 2, W, H - horizon + 2);
+  // haze where the basin meets the sky
+  const seam = lg.createLinearGradient(0, horizon - 14, 0, horizon + 26);
+  seam.addColorStop(0, 'rgba(255,140,100,0)');
+  seam.addColorStop(0.45, 'rgba(255,140,100,0.16)');
+  seam.addColorStop(1, 'rgba(255,140,100,0)');
+  lg.fillStyle = seam;
+  lg.fillRect(0, horizon - 14, W, 40);
+  for (let y = horizon - 2, row = 0; y < H * 0.95; row++) {
+    const d = (y - horizon) / (H - horizon);
+    const count = Math.round(W / (1.4 + d * 7));
+    for (let i = 0; i < count; i++) {
+      const x = rnd(-10, W + 10);
+      const r = Math.random();
+      lg.fillStyle = r < 0.72 ? `rgba(255,${rand(50) + 160},${rand(50) + 80},${rnd(0.35, 0.9)})`
+        : r < 0.92 ? `rgba(235,240,255,${rnd(0.35, 0.85)})` : `rgba(${rand(2) ? '120,200,255' : '200,120,255'},${rnd(0.3, 0.7)})`;
+      const sz = 0.6 + d * 1.8 * Math.random();
+      lg.fillRect(x, y + rnd(-1, 1), sz, sz);
+    }
+    y += 1.2 + d * 9;
+  }
+  for (const a of [-4, -3, -2, -1, 1, 2, 3, 4]) {
+    const vx = W * rnd(0.3, 0.7);
+    const bx = vx + a * W * rnd(0.28, 0.4);
+    lg.fillStyle = 'rgba(255,200,120,0.32)';
+    for (let u = 0; u < 1; u += 0.004) {
+      const x = vx + (bx - vx) * u, y = horizon + (H - horizon) * u * u;
+      const sz = 0.8 + u * 2.2;
+      lg.fillRect(x, y, sz, sz);
+    }
+  }
+  city.lights = lc;
+  // a few lights twinkle
+  city.twinkle = [];
+  for (let i = 0; i < 70; i++) city.twinkle.push({ x: rnd(0, W), y: horizon + Math.pow(Math.random(), 1.6) * (H * 0.9 - horizon), p: rnd(0, 6) });
+
+  // downtown skyline, right of the machine
+  const [sc, sg] = hiCanvas(W, H);
+  const drawTowers = (cx, span, maxH, count, far) => {
+    const base = horizon + 4;
+    const list = [];
+    for (let i = 0; i < count; i++) {
+      const u = (i + rnd(-0.3, 0.3)) / count;
+      const x = cx + (u - 0.5) * span;
+      const center = 1 - Math.abs(u - 0.5) * 1.7;
+      const h = maxH * Math.max(0.12, center * rnd(0.55, 1.05));
+      const w = rnd(14, 34) * (far ? 0.75 : 1);
+      list.push({ x, w, h });
+    }
+    list.sort((a, b) => (far ? 0 : a.h - b.h));
+    for (const b of list) {
+      const x = b.x - b.w / 2, top = base - b.h;
+      const gr = sg.createLinearGradient(x, 0, x + b.w, 0);
+      gr.addColorStop(0, far ? '#2a1e3c' : '#1b1428');
+      gr.addColorStop(0.35, far ? '#1a1428' : '#0e0b18');
+      gr.addColorStop(1, far ? '#120e1e' : '#07060d');
+      sg.fillStyle = gr;
+      const stepped = Math.random() < 0.35;
+      sg.beginPath();
+      if (stepped) {
+        sg.moveTo(x, base); sg.lineTo(x, top + b.h * 0.12); sg.lineTo(x + b.w * 0.18, top + b.h * 0.12);
+        sg.lineTo(x + b.w * 0.18, top); sg.lineTo(x + b.w * 0.82, top); sg.lineTo(x + b.w * 0.82, top + b.h * 0.12);
+        sg.lineTo(x + b.w, top + b.h * 0.12); sg.lineTo(x + b.w, base);
+      } else sg.rect(x, top, b.w, b.h);
+      sg.fill();
+      // sunset catching the left edge
+      sg.fillStyle = 'rgba(255,140,110,0.18)';
+      sg.fillRect(x, top, 1, b.h);
+      // windows
+      const cols = Math.max(2, Math.floor(b.w / 3.6)), rows = Math.floor(b.h / 4.2);
+      const pal = ['255,214,150', '255,236,200', '255,190,110', '190,215,255'];
+      const lit = rnd(0.18, 0.45) * (far ? 0.7 : 1);
+      for (let r = 2; r < rows - 1; r++) {
+        for (let k = 0; k < cols; k++) {
+          if (Math.random() > lit) continue;
+          sg.fillStyle = `rgba(${pal[rand(pal.length)]},${rnd(0.45, 0.95) * (far ? 0.7 : 1)})`;
+          sg.fillRect(x + 1.4 + k * (b.w - 2.8) / cols, top + r * 4.2, 1.5, 2.1);
+        }
+      }
+      // crown lights on the tallest towers
+      if (!far && b.h > maxH * 0.7) {
+        const col = Math.random() < 0.5 ? '170,110,255' : '110,190,255';
+        const cg = sg.createLinearGradient(0, top - 6, 0, top + 12);
+        cg.addColorStop(0, `rgba(${col},0)`);
+        cg.addColorStop(0.5, `rgba(${col},0.85)`);
+        cg.addColorStop(1, `rgba(${col},0)`);
+        sg.fillStyle = cg;
+        sg.fillRect(x - 2, top - 6, b.w + 4, 18);
+        if (Math.random() < 0.6) {
+          sg.strokeStyle = '#08060e';
+          sg.lineWidth = 1.2;
+          sg.beginPath();
+          sg.moveTo(x + b.w / 2, top);
+          sg.lineTo(x + b.w / 2, top - b.h * 0.12);
+          sg.stroke();
+          city.beacons.push({ x: x + b.w / 2, y: top - b.h * 0.12, p: rnd(0, 6) });
+        } else city.beacons.push({ x: x + b.w / 2, y: top, p: rnd(0, 6) });
+      }
+    }
+  };
+  drawTowers(W * 0.8, W * 0.3, H * 0.3, 16, true);
+  drawTowers(W * 0.8, W * 0.26, H * 0.4, 14, false);
+  drawTowers(W * 0.1, W * 0.1, H * 0.12, 6, true);             // a smaller cluster on the far left
+  city.skyline = sc;
+  city.skyTop = horizon - H * 0.4;
+
+  // freeways: one sweeping in from the left, one from the right, below the machine's sides
+  city.roads = [
+    { p0: [-60, H * 0.76], p1: [W * 0.2, H * 0.84], p2: [W * 0.42, H * 1.04] },
+    { p0: [W * 0.6, H * 1.04], p1: [W * 0.8, H * 0.82], p2: [W + 60, H * 0.79] },
+  ];
+  for (const road of city.roads) {
+    for (let i = 0; i < 46; i++) city.cars.push({ road, u: Math.random(), lane: i % 2, v: rnd(0.0016, 0.0032) });
+  }
+
+  // palms: tall ones framing the scene, small ones along the streets
+  const palmSprites = [-1, -0.4, 0.3, 1].map((lean) => makePalmSprite(Math.round(H * 0.8), lean));
+  city.palmSprites = palmSprites.map((p) => ({ ...p, blur: blurredCopy(p.c, 1.4) }));
+  const front = [[0.02, 0.9], [0.1, 0.72], [0.17, 0.6], [0.84, 0.66], [0.91, 0.84], [0.985, 0.74]];
+  city.palms = front.map(([u, hk]) => ({ x: u * W, h: H * hk, sp: rand(palmSprites.length), p: rnd(0, 6), w: rnd(0.8, 1.2) }));
+  for (let i = 0; i < 12; i++) {
+    const x = rnd(0, W);
+    city.midPalms.push({ x, y: horizon + rnd(0.06, 0.2) * H, h: H * rnd(0.05, 0.1), sp: rand(palmSprites.length), p: rnd(0, 6), w: rnd(0.8, 1.2) });
+  }
+  city.midPalms.sort((a, b) => a.y - b.y);
+}
+
+function roadPoint(r, u) {
+  const [a, b, c] = [r.p0, r.p1, r.p2];
+  const x = (1 - u) * (1 - u) * a[0] + 2 * (1 - u) * u * b[0] + u * u * c[0];
+  const y = (1 - u) * (1 - u) * a[1] + 2 * (1 - u) * u * b[1] + u * u * c[1];
+  const dx = 2 * (1 - u) * (b[0] - a[0]) + 2 * u * (c[0] - b[0]);
+  const dy = 2 * (1 - u) * (b[1] - a[1]) + 2 * u * (c[1] - b[1]);
+  const l = Math.hypot(dx, dy) || 1;
+  return [x, y, -dy / l, dx / l];
+}
+
+function drawCity(lvl) {
+  if (!city) return;
+  const px = scene.px, py = scene.py;
+  // warm glow of the city on the low clouds and the horizon
+  const hz = bctx.createLinearGradient(0, city.horizon - H * 0.35, 0, city.horizon + 10);
+  hz.addColorStop(0, 'rgba(0,0,0,0)');
+  hz.addColorStop(1, lvl === 4 ? 'rgba(255,60,90,0.28)' : lvl === 3 ? 'rgba(150,230,190,0.18)' : 'rgba(255,150,90,0.26)');
+  bctx.fillStyle = hz;
+  bctx.fillRect(0, city.horizon - H * 0.35, W, H * 0.35 + 10);
+
+  bctx.drawImage(city.hills, -px * 5, -py * 3, W, H);
+  if (lvl >= 3) { bctx.save(); bctx.translate(-px * 5, -py * 3); drawTornado(lvl); bctx.restore(); }
+  bctx.drawImage(city.skyline, -px * 8, -py * 4, W, H);
+  // flash lights up the city
+  if (scene.flash > 0.05) {
+    bctx.save();
+    bctx.globalCompositeOperation = 'lighter';
+    bctx.globalAlpha = scene.flash * 0.25;
+    bctx.drawImage(city.skyline, -px * 8, -py * 4, W, H);
+    bctx.restore();
+  }
+  bctx.drawImage(city.lights, -px * 12, -py * 5, W, H);
+  // twinkling lights and red aircraft beacons
+  for (const tw of city.twinkle) {
+    const a = 0.5 + 0.5 * Math.sin(t * 3 + tw.p);
+    bctx.fillStyle = `rgba(255,230,190,${a * 0.9})`;
+    bctx.fillRect(tw.x - px * 12, tw.y - py * 5, 1.6, 1.6);
+  }
+  for (const b of city.beacons) {
+    const on = Math.sin(t * 2.6 + b.p) > 0.55;
+    if (!on) continue;
+    const x = b.x - px * 8, y = b.y - py * 4;
+    const g = bctx.createRadialGradient(x, y, 0, x, y, 7);
+    g.addColorStop(0, 'rgba(255,60,60,0.95)');
+    g.addColorStop(1, 'rgba(255,40,40,0)');
+    bctx.fillStyle = g;
+    bctx.fillRect(x - 7, y - 7, 14, 14);
+  }
+  // palms along the streets
+  for (const p of city.midPalms) drawPalm(p, p.x - px * 14, p.y - py * 6, false);
+}
+
+function drawFreeways(lvl) {
+  if (!city) return;
+  bctx.save();
+  bctx.translate(-scene.px * 18, 0);
+  for (const r of city.roads) {
+    // wet asphalt with a sheen
+    bctx.strokeStyle = '#08070d';
+    bctx.lineWidth = 22;
+    bctx.beginPath();
+    bctx.moveTo(...r.p0);
+    bctx.quadraticCurveTo(...r.p1, ...r.p2);
+    bctx.stroke();
+    bctx.strokeStyle = `rgba(255,170,120,${0.08 + scene.flash * 0.2})`;
+    bctx.lineWidth = 1;
+    for (const off of [-11, 11]) {
+      bctx.beginPath();
+      for (let u = 0; u <= 1.001; u += 0.02) {
+        const [x, y, nx, ny] = roadPoint(r, u);
+        u ? bctx.lineTo(x + nx * off, y + ny * off) : bctx.moveTo(x + nx * off, y + ny * off);
+      }
+      bctx.stroke();
+    }
+  }
+  // long-exposure light trails: white headlights one way, red tail lights the other
+  bctx.globalCompositeOperation = 'lighter';
+  bctx.lineCap = 'round';
+  for (const car of city.cars) {
+    const dir = car.lane ? -1 : 1;
+    car.u += car.v * dir;
+    if (car.u > 1) car.u -= 1;
+    if (car.u < 0) car.u += 1;
+    const [x1, y1, nx, ny] = roadPoint(car.road, car.u);
+    const [x0, y0] = roadPoint(car.road, Math.max(0, Math.min(1, car.u - car.v * dir * 14)));
+    const off = car.lane ? 5 : -5;
+    bctx.strokeStyle = car.lane ? 'rgba(255,60,50,0.75)' : 'rgba(255,240,210,0.8)';
+    bctx.lineWidth = 2.2;
+    bctx.beginPath();
+    bctx.moveTo(x0 + nx * off, y0 + ny * off);
+    bctx.lineTo(x1 + nx * off, y1 + ny * off);
+    bctx.stroke();
+    // reflection of the lights on the wet road
+    bctx.strokeStyle = car.lane ? 'rgba(255,60,50,0.18)' : 'rgba(255,240,210,0.16)';
+    bctx.lineWidth = 1.4;
+    bctx.beginPath();
+    bctx.moveTo(x1 + nx * off, y1 + ny * off);
+    bctx.lineTo(x1 + nx * off, y1 + ny * off + 12);
+    bctx.stroke();
+  }
+  bctx.restore();
+}
+
+function drawPalm(p, x, y, front) {
+  const spr = city.palmSprites[p.sp];
+  const img = front ? spr.blur : spr.c;
+  const pad = front ? (img.width - spr.c.width) / 2 : 0;
+  const s = p.h / spr.c.height;
+  const sway = Math.sin(t * (0.9 + wind * 2.2) * p.w + p.p) * (0.006 + wind * 0.02) + wind * 0.025;
+  bctx.save();
+  bctx.translate(x, y);
+  bctx.rotate(sway);
+  bctx.drawImage(img, -img.width / 2 * s, -(spr.c.height + pad) * s, img.width * s, img.height * s);
+  bctx.restore();
+}
+
+function drawPalms(lvl) {
+  if (!city) return;
+  for (const p of city.palms) drawPalm(p, p.x - scene.px * 24, H + 8, true);
+}
+
 function drawBackground() {
   const lvl = state.level;
   const skyK = 0.02 + scene.rush * 0.1;
@@ -1990,11 +2398,19 @@ function drawBackground() {
   drawClouds(1, lvl);
   drawMoonRays(lvl);
   drawBirds(lvl);
-  drawRanges(lvl);
-  drawLake(lvl);
-  drawFog(lvl);
-  drawGround(lvl);
-  drawForeground(lvl);
+  if (CITY) {
+    drawCity(lvl);
+    drawFog(lvl);
+    drawFreeways(lvl);
+    drawGround(lvl);
+    drawPalms(lvl);
+  } else {
+    drawRanges(lvl);
+    drawLake(lvl);
+    drawFog(lvl);
+    drawGround(lvl);
+    drawForeground(lvl);
+  }
   drawAirborne(lvl);
   drawRain(lvl);
 
