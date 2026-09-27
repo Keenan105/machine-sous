@@ -883,7 +883,9 @@ async function buyBonus(kind) {
 
 // Sky colours per level: [zenith, middle, horizon].
 // 'city': Los Angeles at dusk under the rain. 'mountains': the original valley with lake and ruins.
-const SCENERY = 'city';
+// 'photo': the painted Los Angeles storm (img/backdrop.webp) with live rain and lightning on top.
+const SCENERY = 'photo';
+const PHOTO = SCENERY === 'photo';
 const CITY = SCENERY === 'city';
 const SKY = CITY ? [
   [[22, 16, 52], [86, 36, 98], [214, 104, 72]],
@@ -1376,7 +1378,11 @@ function resize() {
   cloudSheets.forEach((sh) => (sh.x = rnd(0, 1000)));
 
   if (!fogSprite) fogSprite = makeFogSprite();
-  if (CITY) { buildCity(); } else {
+  if (PHOTO) {
+    const flat = [];
+    for (let x = -80; x <= W + 80; x += 5) flat.push([x, H * 0.55]);
+    ranges = [{ pts: flat }, { pts: flat }];
+  } else if (CITY) { buildCity(); } else {
   ranges = [
     makeRange(H * 0.62, H * 0.26, 2.2, 1.7, true),
     makeRange(H * 0.74, H * 0.16, 3.4, 5.3, false),
@@ -1903,7 +1909,10 @@ function ambientLightning(lvl) {
   if (Math.random() < strikeChance) {
     let x = rnd(0.05, 0.95) * W;
     let ty = ridgeY(ranges[rand(2)], x);
-    if (CITY && city && city.beacons.length > 1 && Math.random() < 0.6) {
+    if (PHOTO && photoRect) {
+      x = photoRect.x + photoRect.w * rnd(0.3, 0.92);
+      ty = photoRect.y + photoRect.h * rnd(0.42, 0.55);
+    } else if (CITY && city && city.beacons.length > 1 && Math.random() < 0.6) {
       const b = city.beacons[1 + rand(city.beacons.length - 1)];
       x = b.x; ty = b.y;
     }
@@ -2431,6 +2440,48 @@ function drawPalms(lvl) {
   for (const p of city.palms) drawPalm(p, p.x - scene.px * 24, H + 8, true);
 }
 
+/* ------------------------- painted backdrop ------------------------- */
+
+const backdrop = new Image();
+backdrop.src = 'img/backdrop.webp';
+const photoTint = [0, 0, 0, 0];        // r, g, b, strength, eased towards the current level
+const PHOTO_TINTS = [
+  [0, 0, 0, 0],
+  [8, 6, 30, 0.14],
+  [6, 4, 24, 0.26],
+  [30, 110, 90, 0.3],
+  [150, 10, 50, 0.38],
+];
+let photoRect = null;
+
+// The painting, cover-fitted around the skyline, with a gentle parallax; the weather tints it.
+function drawPhoto(lvl) {
+  bctx.fillStyle = '#0b0620';
+  bctx.fillRect(0, 0, W, H);
+  if (!backdrop.complete || !backdrop.naturalWidth) return;
+  const iw = backdrop.naturalWidth, ih = backdrop.naturalHeight;
+  const sc = Math.max(W / iw, H / ih) * 1.05;
+  const w = iw * sc, h = ih * sc;
+  const x = (W - w) * 0.55 - scene.px * 10, y = (H - h) * 0.5 - scene.py * 6;
+  photoRect = { x, y, w, h };
+  bctx.drawImage(backdrop, x, y, w, h);
+  // lightning lights up the whole painting
+  if (scene.flash > 0.02) {
+    bctx.save();
+    bctx.globalCompositeOperation = 'screen';
+    bctx.globalAlpha = Math.min(0.55, scene.flash * 0.45);
+    bctx.drawImage(backdrop, x, y, w, h);
+    bctx.restore();
+  }
+  // weather tint
+  const want = PHOTO_TINTS[lvl];
+  for (let i = 0; i < 4; i++) photoTint[i] = lerp(photoTint[i], want[i], 0.03 + scene.rush * 0.1);
+  if (photoTint[3] > 0.01) {
+    bctx.fillStyle = rgb(photoTint, photoTint[3]);
+    bctx.fillRect(0, 0, W, H);
+  }
+}
+
 function drawBackground() {
   const lvl = state.level;
   const skyK = 0.02 + scene.rush * 0.1;
@@ -2442,6 +2493,27 @@ function drawBackground() {
   scene.py = lerp(scene.py, (scene.tpy * 0.5 + Math.sin(t * 0.09) * 0.2) * drift, 0.03);
 
   ambientLightning(lvl);
+  if (PHOTO) {
+    drawPhoto(lvl);
+    drawSkyDragon(lvl);
+    for (const b of scene.bolts) drawBolt(bctx, b, lvl);
+    scene.bolts = scene.bolts.filter((b) => b.life > 0);
+    drawAirborne(lvl);
+    drawRain(lvl);
+    if (grainPattern) {
+      bctx.save();
+      bctx.globalCompositeOperation = 'overlay';
+      bctx.globalAlpha = 0.05;
+      bctx.fillStyle = grainPattern;
+      bctx.translate(-rand(160), -rand(160));
+      bctx.fillRect(0, 0, W + 160, H + 160);
+      bctx.restore();
+    }
+    drawVignette(lvl);
+    scene.flash *= 0.9;
+    if (scene.flash < 0.01) scene.flash = 0;
+    return;
+  }
   drawSky(lvl);
   drawClouds(0, lvl);
   drawSkyDragon(lvl);
