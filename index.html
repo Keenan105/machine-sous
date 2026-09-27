@@ -41,13 +41,22 @@
     <div id="fsBar" hidden></div>
 
     <div id="machine">
-      <button id="buyBtn" title="Acheter un bonus">
-        <img class="buy-icon" src="img/bonus.webp" alt="">
-        <span class="buy-text">
-          <span class="buy-label">BONUS</span>
-          <span class="buy-sub">Acheter</span>
-        </span>
-      </button>
+      <div id="buyBar">
+        <button class="buy-btn" data-kind="eye" title="Acheter Eye of the Storm">
+          <img class="buy-icon" src="img/bonus.webp" alt="">
+          <span class="buy-text">
+            <span class="buy-label">BONUS</span>
+            <span class="buy-price" data-price="eye">88</span>
+          </span>
+        </button>
+        <button class="buy-btn buy-super" data-kind="super" title="Acheter Super Eye of the Storm">
+          <img class="buy-icon" src="img/super.webp" alt="">
+          <span class="buy-text">
+            <span class="buy-label">SUPER</span>
+            <span class="buy-price" data-price="super">141</span>
+          </span>
+        </button>
+      </div>
       <section id="boardWrap">
         <div id="dragon" aria-hidden="true">🐉</div>
         <div id="zoneLayer" aria-hidden="true">

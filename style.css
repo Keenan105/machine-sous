@@ -555,14 +555,19 @@ body.rumble #app { animation: rumble 1s linear; }
 }
 
 /* bonus buy */
-/* BONUS button on the left side of the machine, vertically centred on the grid */
+/* Two BONUS buttons stacked on the left side of the machine, centred on the grid */
 #machine { position: relative; }
-#buyBtn {
+#buyBar {
   position: absolute;
   z-index: 5;
   top: 50%;
   right: calc(100% + 14px);
   transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.buy-btn {
   width: 132px;
   padding: 8px 6px 10px;
   display: flex;
@@ -578,44 +583,52 @@ body.rumble #app { animation: rumble 1s linear; }
   box-shadow: 0 0 18px rgba(255, 200, 80, 0.5);
   animation: buyGlow 2.4s ease-in-out infinite;
 }
-#buyBtn .buy-icon { width: 120px; height: auto; display: block; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.55)); }
-#buyBtn .buy-text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-#buyBtn .buy-label { font-size: 17px; letter-spacing: 0.12em; }
-#buyBtn .buy-sub { font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4a3208; }
-#buyBtn:hover { filter: brightness(1.1); }
-#buyBtn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: default; animation: none; }
+.buy-super {
+  color: #fff4e0;
+  background: linear-gradient(180deg, #f6b25a, #c8452e 55%, #6e1224);
+  border-color: #ffc98a;
+  box-shadow: 0 0 20px rgba(255, 90, 70, 0.5);
+  animation-name: superGlow;
+}
+.buy-btn .buy-icon { width: 120px; height: auto; display: block; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.55)); }
+.buy-btn .buy-text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.buy-btn .buy-label { font-size: 17px; letter-spacing: 0.12em; }
+.buy-btn .buy-price { white-space: nowrap; font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; color: #4a3208; font-variant-numeric: tabular-nums; }
+.buy-super .buy-price { color: #ffe3c2; }
+.buy-btn:hover { filter: brightness(1.1); }
+.buy-btn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: default; animation: none; }
 @keyframes buyGlow { 50% { box-shadow: 0 0 30px rgba(255, 210, 90, 0.85); } }
+@keyframes superGlow { 50% { box-shadow: 0 0 32px rgba(255, 90, 70, 0.85); } }
 
-/* Plenty of room beside the machine: a wide, horizontal banner */
+/* Plenty of room beside the machine: wide, horizontal banners */
 @media (min-width: 1200px) {
-  #buyBtn {
+  .buy-btn {
     flex-direction: row;
     width: 280px;
     padding: 10px 16px 10px 10px;
     gap: 12px;
     border-radius: 20px;
   }
-  #buyBtn .buy-icon { width: 160px; flex: none; }
-  #buyBtn .buy-text { flex: 1; }
-  #buyBtn .buy-label { font-size: 22px; letter-spacing: 0.1em; }
-  #buyBtn .buy-sub { font-size: 12px; }
+  .buy-btn .buy-icon { width: 150px; flex: none; }
+  .buy-btn .buy-text { flex: 1; }
+  .buy-btn .buy-label { font-size: 22px; letter-spacing: 0.1em; }
+  .buy-btn .buy-price { font-size: 12px; }
 }
 
-/* Not enough room beside the machine: a vertical tab on the grid's left edge */
+/* Not enough room beside the machine: vertical tabs on the grid's left edge */
 @media (max-width: 959px) {
-  #buyBtn {
-    right: auto;
-    left: -16px;
+  #buyBar { right: auto; left: -16px; gap: 8px; }
+  .buy-btn {
     width: 26px;
-    padding: 14px 0;
+    padding: 12px 0;
     border-radius: 0 12px 12px 0;
     writing-mode: vertical-rl;
-    transform: translateY(-50%) rotate(180deg);
+    transform: rotate(180deg);
   }
-  #buyBtn .buy-icon, #buyBtn .buy-sub { display: none; }
-  #buyBtn .buy-label { font-size: 13px; letter-spacing: 0.18em; }
+  .buy-btn .buy-icon, .buy-btn .buy-price { display: none; }
+  .buy-btn .buy-label { font-size: 12px; letter-spacing: 0.16em; }
 }
-@media (prefers-reduced-motion: reduce) { #buyBtn { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .buy-btn { animation: none; } }
 
 #buyModal {
   position: fixed;
@@ -656,7 +669,7 @@ body.rumble #app { animation: rumble 1s linear; }
   border: 1px solid var(--line);
 }
 .offer-super { border-color: rgba(255, 110, 140, 0.55); box-shadow: inset 0 0 30px rgba(255, 60, 110, 0.12); }
-.offer-art .art { width: 96px; height: 96px; display: block; object-fit: contain; filter: drop-shadow(0 0 14px rgba(127, 211, 255, 0.5)); }
+.offer-art .art { width: 180px; height: 130px; display: block; object-fit: contain; filter: drop-shadow(0 0 14px rgba(127, 211, 255, 0.5)); }
 .offer-super .offer-art .art { filter: drop-shadow(0 0 16px rgba(255, 80, 110, 0.6)); }
 .offer h3 { margin: 0; font-family: Cinzel, Georgia, serif; font-size: 16px; text-align: center; }
 .offer ul { margin: 0; padding-left: 18px; font-size: 13px; color: #c9d6ea; line-height: 1.5; align-self: stretch; }
@@ -677,3 +690,5 @@ body.rumble #app { animation: rumble 1s linear; }
 .offer-buy:disabled { filter: grayscale(0.8) brightness(0.6); cursor: default; }
 #buyClose { align-self: center; }
 button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
+
+#offers.single { grid-template-columns: minmax(0, 340px); justify-content: center; }
