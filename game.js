@@ -2724,7 +2724,29 @@ const audio = {
       src.start();
       return { f, g };
     };
-    this.rain = loop('highpass', 1400);
+    // Rain: a soft pink-noise wash (no hiss) plus individual drops pattering on the ground.
+    this.pink = ctx.createBuffer(1, len, ctx.sampleRate);
+    const pk = this.pink.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) {
+      const w = Math.random() * 2 - 1;
+      b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0526;
+      pk[i] = (b0 + b1 + b2 + w * 0.1848) * 0.2;
+    }
+    const rsrc = ctx.createBufferSource();
+    rsrc.buffer = this.pink;
+    rsrc.loop = true;
+    const rhp = ctx.createBiquadFilter(); rhp.type = 'highpass'; rhp.frequency.value = 300;
+    const rlp = ctx.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 3200;
+    const rg = ctx.createGain(); rg.gain.value = 0;
+    rsrc.connect(rhp).connect(rlp).connect(rg).connect(this.ambient);
+    rsrc.start();
+    this.rain = { f: rlp, g: rg };
+    this.patter = ctx.createGain();
+    this.patter.gain.value = 0;
+    this.patter.connect(this.ambient);
+    this.dropRate = 0;
+    this.dropTimer = setInterval(() => this.drops(), 50);
     this.wind = loop('bandpass', 450, 1.4);
     this.rumbleBed = loop('lowpass', 80);
     this.lfo = ctx.createOscillator();
@@ -2735,10 +2757,39 @@ const audio = {
     this.lfo.start();
     this.setLevel(state.level);
   },
+  // A few raindrops per tick: tiny, randomly pitched ticks panned across the stereo field.
+  drops() {
+    if (!this.ctx || !this.on || this.ctx.state !== 'running') return;
+    const ctx = this.ctx;
+    const n = Math.round(this.dropRate * (0.6 + Math.random() * 0.8));
+    for (let i = 0; i < n; i++) {
+      const when = ctx.currentTime + Math.random() * 0.05;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noise;
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1500 + Math.random() * 4500;
+      f.Q.value = 3 + Math.random() * 5;
+      const g = ctx.createGain();
+      const peak = 0.15 + Math.random() * 0.35;
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.linearRampToValueAtTime(peak, when + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.012 + Math.random() * 0.025);
+      const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      if (pan) pan.pan.value = Math.random() * 2 - 1;
+      src.connect(f).connect(g);
+      (pan ? g.connect(pan) : g).connect(this.patter);
+      src.start(when, Math.random() * 2);
+      src.stop(when + 0.05);
+    }
+  },
   setLevel(l) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    this.rain.g.gain.setTargetAtTime([0.02, 0.03, 0.04, 0.05, 0.06][l], now, 0.8);
+    this.rain.g.gain.setTargetAtTime([0.05, 0.065, 0.08, 0.095, 0.11][l], now, 0.8);
+    this.rain.f.frequency.setTargetAtTime([2400, 2800, 3200, 3600, 4000][l], now, 0.8);
+    this.patter.gain.setTargetAtTime([0.05, 0.06, 0.07, 0.08, 0.09][l], now, 0.8);
+    this.dropRate = [3, 5, 8, 11, 14][l];                      // drops per 50 ms tick
     this.wind.g.gain.setTargetAtTime([0, 0.3, 0.45, 0.65, 0.9][l], now, 1.2);
     this.rumbleBed.g.gain.setTargetAtTime([0, 0, 0.3, 0.7, 1.1][l], now, 1.2);
     this.lfo.frequency.setTargetAtTime(0.12 + l * 0.12, now, 1);
