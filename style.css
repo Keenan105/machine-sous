@@ -1091,3 +1091,13 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
   #spin { width: 78px; height: 78px; }
   #spin .spin-t { font-size: 56px; }
 }
+
+/* the orb carries a single gold lightning bolt */
+#spin .spin-bolt {
+  width: 58px;
+  height: 58px;
+  filter: drop-shadow(0 0 8px rgba(255, 220, 120, 0.95)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+  transition: transform 0.2s;
+}
+#spin:hover .spin-bolt { transform: scale(1.08) rotate(-4deg); }
+@media (max-width: 520px) { #spin .spin-bolt { width: 54px; height: 54px; } }
