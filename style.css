@@ -1232,7 +1232,7 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
 .cell.spinning .sym { visibility: hidden; }
 .cell.sticky { z-index: 4; }
 /* the reel lands a touch past its stop and settles back */
-.cell.reelstop .sym:not(.old) { animation: reelStop 0.34s cubic-bezier(.25, .9, .3, 1.3) both; }
+.cell.reelstop .sym:not(.old) { animation: reelStop 0.42s cubic-bezier(.25, .9, .3, 1.3) both; }
 @keyframes reelStop {
   0% { transform: translate3d(0, -45%, 0) scale(0.96, 1.08); filter: blur(1.2px); }
   55% { transform: translate3d(0, 7%, 0) scale(1.04, 0.95); filter: blur(0); }

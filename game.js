@@ -278,7 +278,7 @@ async function levelTransition(level) {
 /* ------------------------- column-by-column drop ------------------------- */
 
 const FALL_MS = 190;         // chute d'une colonne au tour de base (ms)
-const CASCADE_FALL_MS = 150; // chute d'une colonne pendant les cascades
+const CASCADE_FALL_MS = 175; // chute d'une colonne pendant les cascades
 const LAND_SHARE = 0.5;      // part de l'animation consacrée à la chute, le reste est le rebond
 const ROW_LAG = 20;          // dans une colonne, chaque rangée se pose un peu après celle du dessous (ms)
 
@@ -334,8 +334,8 @@ async function clearBoard(cells) {
 }
 
 // Tour de base : la grille se vide, puis les colonnes tombent l'une après l'autre.
-const REEL_SPIN_MS = 520;     // every reel spins at least this long
-const REEL_STOP_GAP = 170;   // then they stop one after another, left to right
+const REEL_SPIN_MS = 640;     // every reel spins at least this long
+const REEL_STOP_GAP = 210;   // then they stop one after another, left to right
 const REEL_POOL = ['leaf', 'drop', 'rock', 'ice', 'wolf', 'eagle', 'trident', 'crown', 'charge'];
 
 // Classic reels: every column spins (the grid is never empty), then stops in turn with a bounce.
@@ -360,7 +360,7 @@ async function dropColumns(step) {
     const syms = Array.from({ length: n }, () => REEL_POOL[rand(REEL_POOL.length)]);
     track.innerHTML = [...syms, ...syms].map((k) => `<div class="reel-sym" style="height:${pitch}px">${symbolSVG(k)}</div>`).join('');
     track.style.setProperty('--loop', -n * pitch + 'px');
-    track.style.animationDuration = 60 * n + 'ms';
+    track.style.animationDuration = 72 * n + 'ms';
     track.style.animationDelay = -rand(600) + 'ms';
     reel.appendChild(track);
     board.appendChild(reel);
@@ -383,7 +383,7 @@ async function dropColumns(step) {
     await sleep(REEL_STOP_GAP);
   }
   grid = next;
-  await sleep(260);
+  await sleep(320);
 }
 
 // Cascade : les symboles restants glissent vers le bas, les nouveaux tombent du haut, colonne par colonne.
