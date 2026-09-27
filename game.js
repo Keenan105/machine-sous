@@ -2868,8 +2868,8 @@ const audio = {
   },
   thud(power = 1) {
     if (!this.ctx) return;
-    this.tone(150, 0.22 * power, 0.16, 0, 'sine', 60);
-    this.burst(this.noise, 'lowpass', 900, 0.08 * power, 0.003, 0.06);
+    this.tone(150, 0.29 * power, 0.16, 0, 'sine', 60);
+    this.burst(this.noise, 'lowpass', 900, 0.105 * power, 0.003, 0.06);
   },
   whoosh() { if (this.ctx) this.burst(this.noise, 'bandpass', 700, 0.15, 0.08, 0.35, 0, 2000); },
   gust() { if (this.ctx) this.burst(this.noise, 'bandpass', 300, 0.6, 0.3, 1.4, 0, 1200); },
@@ -2889,8 +2889,8 @@ const audio = {
     if (!this.ctx) return;
     // a small stone-on-stone knock; lower rows sound a touch deeper
     const f = 2400 - row * 180 + Math.random() * 300;
-    this.burst(this.noise, 'bandpass', f, 0.07, 0.002, 0.05);
-    this.tone(260 - row * 14 + Math.random() * 20, 0.06, 0.07, 0, 'triangle', 150);
+    this.burst(this.noise, 'bandpass', f, 0.09, 0.002, 0.05);
+    this.tone(260 - row * 14 + Math.random() * 20, 0.08, 0.07, 0, 'triangle', 150);
   },
   sweep() {
     if (this.ctx) this.burst(this.noise, 'bandpass', 1600, 0.12, 0.02, 0.3, 0, 300);
