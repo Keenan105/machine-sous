@@ -1496,3 +1496,8 @@ h1 { font-size: clamp(24px, 6vw, 34px); }
   .charge-head b { font-size: 16px; }
   .charge-goal { width: 70px; }
 }
+
+/* the page never scrolls on desktop: everything fits on one screen */
+@media (min-width: 1240px) and (min-height: 700px) {
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+}

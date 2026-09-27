@@ -1474,7 +1474,7 @@ let resizeTimer = 0;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 200); });
 window.addEventListener('pointermove', (e) => {
   scene.tpx = (e.clientX / W - 0.5) * 2;
-  scene.tpy = (e.clientY / H - 0.5) * 2;
+  scene.tpy = 0;                                   // no vertical movement with the mouse
 });
 resize();
 
@@ -2530,7 +2530,7 @@ function drawBackground() {
   wind = lerp(wind, WIND[lvl], 0.01);
   const drift = REDUCED ? 0 : 1;
   scene.px = lerp(scene.px, (scene.tpx + Math.sin(t * 0.13) * 0.4) * drift, 0.03);
-  scene.py = lerp(scene.py, (scene.tpy * 0.5 + Math.sin(t * 0.09) * 0.2) * drift, 0.03);
+  scene.py = 0;
 
   ambientLightning(lvl);
   if (PHOTO) {
