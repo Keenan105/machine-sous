@@ -950,8 +950,7 @@ function resize() {
   for (let i = 0; i < Math.max(3, W / 300); i++) puddles.push({ x: rnd(0.05, 0.95) * W, y: GROUND + rnd(10, H - GROUND - 12), rx: rnd(30, 70), ry: rnd(3, 6) });
   stars = [];
   for (let i = 0; i < 90; i++) stars.push({ x: rnd(0, W), y: rnd(0, H * 0.45), r: rnd(0.4, 1.3), p: rnd(0, 6) });
-  birds = [];
-  for (let i = 0; i < 7; i++) birds.push({ x: rnd(0, W), y: rnd(H * 0.15, H * 0.4), v: rnd(0.4, 0.9), p: rnd(0, 6), s: rnd(0.7, 1.2) });
+  birds = [0, 1, 2].map((i) => makeFlock(rnd(-0.2, 1) * W, i));
   fog = [];
   for (let i = 0; i < 7; i++) fog.push({ x: rnd(0, W), y: rnd(H * 0.6, GROUND), r: rnd(W * 0.15, W * 0.35), v: rnd(0.1, 0.35) });
 }
@@ -1223,21 +1222,82 @@ function drawTrees(list, range, scale, lvl) {
   for (const tr of list) drawTree(tr, ridgeY(range, tr.x) + 3, scale, col);
 }
 
-function drawBirds(lvl) {
-  const a = Math.max(0, 1 - lvl * 0.45);
-  if (a <= 0) return;
-  bctx.strokeStyle = `rgba(10,14,22,${0.7 * a})`;
-  bctx.lineWidth = 1.4;
-  for (const b of birds) {
-    b.x += b.v + wind * 2;
-    b.y += Math.sin(t + b.p) * 0.2 - lvl * 0.15;
-    if (b.x > W + 30) { b.x = -30; b.y = rnd(H * 0.15, H * 0.4); }
-    const f = Math.sin(t * 8 + b.p) * 4 * b.s;
+// A flock flying in a loose V. z is depth: far flocks are smaller, paler and slower.
+function makeFlock(x, i = rand(3)) {
+  const z = [0.45, 0.7, 1][i % 3] * rnd(0.85, 1.1);
+  const n = 3 + rand(6);
+  const members = [];
+  for (let k = 0; k < n; k++) {
+    const rank = Math.ceil(k / 2), side = k % 2 ? -1 : 1;
+    members.push({
+      dx: -rank * 30 * z, dy: side * rank * 17 * z,          // V formation behind the leader
+      jx: rnd(0, 6), jy: rnd(0, 6),                            // personal wobble
+      p: rnd(0, Math.PI * 2), fs: rnd(7, 9.5),                 // flap phase and speed
+      glide: rand(2) === 0, gt: rnd(0.5, 2.5),                 // gliding or flapping, and for how long
+      s: z * rnd(1.15, 1.45),
+    });
+  }
+  return { x, y: rnd(H * 0.1, H * 0.38), z, v: rnd(0.5, 0.9) * (0.6 + z * 0.5), bob: rnd(0, 6), members };
+}
+
+function drawBird(x, y, s, flap, bank, color) {
+  bctx.save();
+  bctx.translate(x, y);
+  bctx.rotate(bank);
+  bctx.scale(s, s);
+  bctx.fillStyle = color;
+  // wings: a filled crescent each side; flap in [-1, 1] lifts or lowers the tips
+  for (const side of [-1, 1]) {
+    const tipY = -flap * 9 - 1;
     bctx.beginPath();
-    bctx.moveTo(b.x - 7 * b.s, b.y - f);
-    bctx.quadraticCurveTo(b.x - 3 * b.s, b.y - 1, b.x, b.y);
-    bctx.quadraticCurveTo(b.x + 3 * b.s, b.y - 1, b.x + 7 * b.s, b.y - f);
-    bctx.stroke();
+    bctx.moveTo(0, 0);
+    bctx.quadraticCurveTo(side * 5, tipY * 0.9 - 3, side * 13, tipY);
+    bctx.quadraticCurveTo(side * 6, tipY * 0.35 + 1.5, side * 1, 2);
+    bctx.closePath();
+    bctx.fill();
+  }
+  // body, head and tail (flying right)
+  bctx.beginPath();
+  bctx.ellipse(0.5, 1, 4.2, 1.6, 0, 0, Math.PI * 2);
+  bctx.fill();
+  bctx.beginPath();
+  bctx.arc(4.4, 0.4, 1.3, 0, Math.PI * 2);
+  bctx.fill();
+  bctx.beginPath();
+  bctx.moveTo(-3.5, 0.6);
+  bctx.lineTo(-7, -0.6);
+  bctx.lineTo(-6.4, 2.6);
+  bctx.closePath();
+  bctx.fill();
+  bctx.restore();
+}
+
+function drawBirds(lvl) {
+  // Calm skies: gliding flocks. Wind: hurried flapping. From the thunderstorm on, they flee.
+  const a = Math.max(0, 1 - lvl * 0.42);
+  if (a <= 0.01) return;
+  const panic = Math.min(1, lvl * 0.5);
+  const dt = 1 / 60;
+  for (let f = 0; f < birds.length; f++) {
+    const fl = birds[f];
+    fl.x += (fl.v + wind * 2.2 * fl.z) * (1 + panic);
+    fl.bob += dt * 0.6;
+    const vy = Math.cos(fl.bob) * 0.25 - panic * 0.35 * fl.z;
+    fl.y += vy;
+    if (fl.x - 120 > W || fl.y < -40) { birds[f] = makeFlock(-60 - rnd(0, 400)); continue; }
+    const shade = mix(sky[1], [3, 4, 8], 0.72 + fl.z * 0.25);
+    const color = rgb(mix(shade, [220, 230, 255], scene.flash * 0.15 * (1 - fl.z)), a * (0.6 + fl.z * 0.4));
+    const bank = Math.max(-0.35, Math.min(0.35, vy * 0.35));
+    for (const m of fl.members) {
+      m.gt -= dt;
+      if (m.gt <= 0) { m.glide = panic > 0.4 ? false : !m.glide; m.gt = m.glide ? rnd(1, 3) : rnd(0.8, 2.2); }
+      m.p += dt * m.fs * (1 + panic * 0.8);
+      // flapping: full strokes; gliding: wings held slightly raised with a small quiver
+      const flap = m.glide ? 0.25 + Math.sin(m.p * 0.5) * 0.08 : Math.sin(m.p);
+      const x = fl.x + m.dx + Math.sin(t * 0.9 + m.jx) * 3 * fl.z;
+      const y = fl.y + m.dy + Math.sin(t * 1.1 + m.jy) * 2.5 * fl.z + (m.glide ? 0 : -Math.sin(m.p) * 0.6);
+      drawBird(x, y, m.s * 0.9, flap, bank, color);
+    }
   }
 }
 
@@ -1430,10 +1490,10 @@ function drawBackground() {
   drawSky(lvl);
   drawCloudLayer(true, lvl);
   drawSkyDragon(lvl);
-  drawBirds(lvl);
   for (const b of scene.bolts) drawBolt(bctx, b, lvl);
   scene.bolts = scene.bolts.filter((b) => b.life > 0);
   drawCloudLayer(false, lvl);
+  drawBirds(lvl);
   drawRanges(lvl);
   drawFog(lvl);
   drawGround(lvl);

@@ -40,15 +40,22 @@
 
     <div id="fsBar" hidden></div>
 
-    <section id="boardWrap">
-      <div id="dragon" aria-hidden="true">🐉</div>
-      <div id="zoneLayer" aria-hidden="true">
-        <div class="zone" data-z="0"></div><div class="zone" data-z="1"></div><div class="zone" data-z="2"></div>
-      </div>
-      <div id="board"></div>
-      <div id="eye" aria-hidden="true"></div>
-      <div id="banner"></div>
-    </section>
+    <div id="machine">
+      <button id="buyBtn" title="Acheter un bonus">
+        <img class="buy-icon" src="img/wild.webp" alt="">
+        <span class="buy-label">BONUS</span>
+        <span class="buy-sub">Acheter</span>
+      </button>
+      <section id="boardWrap">
+        <div id="dragon" aria-hidden="true">🐉</div>
+        <div id="zoneLayer" aria-hidden="true">
+          <div class="zone" data-z="0"></div><div class="zone" data-z="1"></div><div class="zone" data-z="2"></div>
+        </div>
+        <div id="board"></div>
+        <div id="eye" aria-hidden="true"></div>
+        <div id="banner"></div>
+      </section>
+    </div>
 
     <section id="zones" aria-label="Frappes du Gardien">
       <div class="zinfo" data-z="0"><span>Zone I</span><i></i><i></i><i></i></div>
@@ -67,7 +74,6 @@
       <button id="spin">SPIN</button>
       <div class="stat"><small>Gain</small><b id="win">0</b></div>
       <div class="toggles">
-        <button id="buyBtn" title="Acheter un bonus">BONUS</button>
         <button id="auto" title="Auto-spin">AUTO</button>
         <button id="sound" title="Son">🔊</button>
       </div>

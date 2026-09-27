@@ -555,17 +555,51 @@ body.rumble #app { animation: rumble 1s linear; }
 }
 
 /* bonus buy */
+/* BONUS button on the left side of the machine, vertically centred on the grid */
+#machine { position: relative; }
 #buyBtn {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  right: calc(100% + 14px);
+  transform: translateY(-50%);
+  width: 104px;
+  padding: 12px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-radius: 18px;
   font-family: Cinzel, Georgia, serif;
   font-weight: 900;
-  letter-spacing: 0.08em;
   color: #2b1a02;
   background: linear-gradient(180deg, #ffe89a, #f0b53a 60%, #b8791c);
-  border-color: #ffe7a6;
-  box-shadow: 0 0 14px rgba(255, 200, 80, 0.45);
+  border: 1px solid #ffe7a6;
+  box-shadow: 0 0 18px rgba(255, 200, 80, 0.5);
+  animation: buyGlow 2.4s ease-in-out infinite;
 }
+#buyBtn .buy-icon { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); }
+#buyBtn .buy-label { font-size: 17px; letter-spacing: 0.12em; }
+#buyBtn .buy-sub { font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4a3208; }
 #buyBtn:hover { filter: brightness(1.1); }
-#buyBtn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: default; }
+#buyBtn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: default; animation: none; }
+@keyframes buyGlow { 50% { box-shadow: 0 0 30px rgba(255, 210, 90, 0.85); } }
+
+/* Not enough room beside the machine: a vertical tab on the grid's left edge */
+@media (max-width: 959px) {
+  #buyBtn {
+    right: auto;
+    left: -16px;
+    width: 26px;
+    padding: 14px 0;
+    border-radius: 0 12px 12px 0;
+    writing-mode: vertical-rl;
+    transform: translateY(-50%) rotate(180deg);
+  }
+  #buyBtn .buy-icon, #buyBtn .buy-sub { display: none; }
+  #buyBtn .buy-label { font-size: 13px; letter-spacing: 0.18em; }
+}
+@media (prefers-reduced-motion: reduce) { #buyBtn { animation: none; } }
 
 #buyModal {
   position: fixed;
