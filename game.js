@@ -2724,7 +2724,7 @@ const audio = {
       src.start();
       return { f, g };
     };
-    // Rain: a soft pink-noise wash (no hiss) plus individual drops pattering on the ground.
+    // Pink noise for the rain bed.
     this.pink = ctx.createBuffer(1, len, ctx.sampleRate);
     const pk = this.pink.getChannelData(0);
     let b0 = 0, b1 = 0, b2 = 0;
@@ -2733,18 +2733,47 @@ const audio = {
       b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0526;
       pk[i] = (b0 + b1 + b2 + w * 0.1848) * 0.2;
     }
-    const rsrc = ctx.createBufferSource();
-    rsrc.buffer = this.pink;
-    rsrc.loop = true;
-    const rhp = ctx.createBiquadFilter(); rhp.type = 'highpass'; rhp.frequency.value = 300;
-    const rlp = ctx.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 3200;
-    const rg = ctx.createGain(); rg.gain.value = 0;
-    rsrc.connect(rhp).connect(rlp).connect(rg).connect(this.ambient);
-    rsrc.start();
-    this.rain = { f: rlp, g: rg };
+    // Warm stereo rain: two decorrelated pink-noise beds, softened, gently swelling like gusts,
+    // with a small room reverb so it sounds like rain heard from under a shelter.
+    const rainBus = ctx.createGain();
+    rainBus.gain.value = 0;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800; lp.Q.value = 0.4;
+    const merger = ctx.createChannelMerger(2);
+    for (let ch = 0; ch < 2; ch++) {
+      const src = ctx.createBufferSource();
+      src.buffer = this.pink;
+      src.loop = true;
+      src.connect(merger, 0, ch);
+      src.start(0, ch * 1.37);
+    }
+    merger.connect(hp).connect(lp).connect(rainBus);
+    const swell = ctx.createGain();
+    swell.gain.value = 1;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.07;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.15;
+    lfo.connect(depth).connect(swell.gain);
+    lfo.start();
+    rainBus.connect(swell).connect(this.ambient);
+    // short room reverb shared by the rain and the drops
+    const ir = ctx.createBuffer(2, Math.round(ctx.sampleRate * 1.4), ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d2 = ir.getChannelData(ch);
+      for (let k = 0; k < d2.length; k++) d2[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / d2.length, 3);
+    }
+    this.verb = ctx.createConvolver();
+    this.verb.buffer = ir;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.22;
+    this.verb.connect(wet).connect(this.ambient);
+    rainBus.connect(this.verb);
+    this.rain = { f: lp, g: rainBus };
     this.patter = ctx.createGain();
     this.patter.gain.value = 0;
     this.patter.connect(this.ambient);
+    this.patter.connect(this.verb);
     this.dropRate = 0;
     this.dropTimer = setInterval(() => this.drops(), 50);
     this.wind = loop('bandpass', 450, 1.4);
@@ -2758,38 +2787,39 @@ const audio = {
     this.setLevel(state.level);
   },
   // A few raindrops per tick: tiny, randomly pitched ticks panned across the stereo field.
+  // Raindrops as soft rounded "plips": a sine that quickly slides down, very short and quiet.
   drops() {
     if (!this.ctx || !this.on || this.ctx.state !== 'running') return;
     const ctx = this.ctx;
-    const n = Math.round(this.dropRate * (0.6 + Math.random() * 0.8));
+    let n = Math.floor(this.dropRate);
+    if (Math.random() < this.dropRate - n) n++;
     for (let i = 0; i < n; i++) {
       const when = ctx.currentTime + Math.random() * 0.05;
-      const src = ctx.createBufferSource();
-      src.buffer = this.noise;
-      const f = ctx.createBiquadFilter();
-      f.type = 'bandpass';
-      f.frequency.value = 1500 + Math.random() * 4500;
-      f.Q.value = 3 + Math.random() * 5;
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      const f0 = 900 + Math.random() * 1600;
+      o.frequency.setValueAtTime(f0, when);
+      o.frequency.exponentialRampToValueAtTime(f0 * 0.55, when + 0.025);
       const g = ctx.createGain();
-      const peak = 0.15 + Math.random() * 0.35;
+      const peak = 0.02 + Math.random() * 0.05;
       g.gain.setValueAtTime(0.0001, when);
-      g.gain.linearRampToValueAtTime(peak, when + 0.002);
-      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.012 + Math.random() * 0.025);
+      g.gain.linearRampToValueAtTime(peak, when + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.04 + Math.random() * 0.03);
       const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-      if (pan) pan.pan.value = Math.random() * 2 - 1;
-      src.connect(f).connect(g);
+      if (pan) pan.pan.value = Math.random() * 1.6 - 0.8;
+      o.connect(g);
       (pan ? g.connect(pan) : g).connect(this.patter);
-      src.start(when, Math.random() * 2);
-      src.stop(when + 0.05);
+      o.start(when);
+      o.stop(when + 0.09);
     }
   },
   setLevel(l) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    this.rain.g.gain.setTargetAtTime([0.072, 0.094, 0.115, 0.136, 0.157][l], now, 0.8);
-    this.rain.f.frequency.setTargetAtTime([2400, 2800, 3200, 3600, 4000][l], now, 0.8);
-    this.patter.gain.setTargetAtTime([0.072, 0.085, 0.102, 0.115, 0.128][l], now, 0.8);
-    this.dropRate = [3, 5, 8, 11, 14][l];                      // drops per 50 ms tick
+    this.rain.g.gain.setTargetAtTime([0.058, 0.07, 0.085, 0.102, 0.122][l], now, 0.8);
+    this.rain.f.frequency.setTargetAtTime([1600, 1800, 2000, 2200, 2400][l], now, 0.8);
+    this.patter.gain.setTargetAtTime([0.5, 0.55, 0.6, 0.65, 0.7][l], now, 0.8);
+    this.dropRate = [1, 1.5, 2, 2.5, 3][l];                   // drops per 50 ms tick
     this.wind.g.gain.setTargetAtTime([0, 0.3, 0.45, 0.65, 0.9][l], now, 1.2);
     this.rumbleBed.g.gain.setTargetAtTime([0, 0, 0.3, 0.7, 1.1][l], now, 1.2);
     this.lfo.frequency.setTargetAtTime(0.12 + l * 0.12, now, 1);
