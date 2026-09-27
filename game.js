@@ -98,7 +98,8 @@ function updateUI() {
   $('#balance').textContent = fmt(state.balance);
   $('#bet').textContent = fmt(bet());
   $('#win').textContent = fmt(state.spinWin);
-  $('#spin').disabled = state.busy;
+  // stays clickable while the reels turn (a second click stops them at once)
+  $('#spin').classList.toggle('busy', state.busy && !state.reelsSpinning);
   document.querySelectorAll('.buy-btn').forEach((b) => { b.disabled = state.busy; });
   for (const [kind, o] of Object.entries(StormEngine.BONUS_BUYS)) {
     const el = document.querySelector(`.buy-price[data-price="${kind}"]`);
@@ -338,8 +339,27 @@ const REEL_SPIN_MS = 640;     // every reel spins at least this long
 const REEL_STOP_GAP = 210;   // then they stop one after another, left to right
 const REEL_POOL = ['leaf', 'drop', 'rock', 'ice', 'wolf', 'eagle', 'trident', 'crown', 'charge'];
 
+// Clicking SPIN again while the reels turn stops them all at once ("quick stop").
+let slamWaiters = [];
+function slamStop() {
+  state.slam = true;
+  slamWaiters.forEach((f) => f());
+  slamWaiters = [];
+}
+function waitOrSlam(ms) {
+  if (state.slam) return Promise.resolve();
+  return new Promise((resolve) => {
+    const id = setTimeout(() => { slamWaiters = slamWaiters.filter((f) => f !== done); resolve(); }, ms);
+    const done = () => { clearTimeout(id); resolve(); };
+    slamWaiters.push(done);
+  });
+}
+
 // Classic reels: every column spins (the grid is never empty), then stops in turn with a bounce.
 async function dropColumns(step) {
+  state.slam = false;
+  state.reelsSpinning = true;
+  updateUI();
   const next = step.grid;
   const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
   const boardRect = board.getBoundingClientRect();
@@ -368,7 +388,7 @@ async function dropColumns(step) {
     // hide the old symbols behind the spinning reel, except sticky wilds that stay put
     for (let r = 0; r < ROWS; r++) if (landed.has(c + ',' + r)) cellEl(c, r).classList.add('spinning');
   }
-  await sleep(REEL_SPIN_MS);
+  await waitOrSlam(REEL_SPIN_MS);
   for (let c = 0; c < COLS; c++) {
     for (let r = 0; r < ROWS; r++) {
       grid[c][r] = next[c][r];
@@ -378,12 +398,13 @@ async function dropColumns(step) {
     const reel = reels[c];
     reel.classList.add('stopping');
     setTimeout(() => reel.remove(), 140);
-    audio.thud(0.8);
-    audio.clack(2);
-    await sleep(REEL_STOP_GAP);
+    if (!state.slam || c === COLS - 1) { audio.thud(state.slam ? 1.2 : 0.8); audio.clack(2); }
+    if (!state.slam) await waitOrSlam(REEL_STOP_GAP);
   }
+  state.reelsSpinning = false;
+  updateUI();
   grid = next;
-  await sleep(320);
+  await sleep(state.slam ? 200 : 320);
 }
 
 // Cascade : les symboles restants glissent vers le bas, les nouveaux tombent du haut, colonne par colonne.
@@ -796,7 +817,7 @@ async function playPaid(cost, makeResult) {
 }
 
 async function spin(forced) {
-  if (state.busy) return;
+  if (state.busy) { if (state.reelsSpinning) slamStop(); return; }
   if (state.balance < bet() - 1e-9) {
     say('Solde insuffisant : baisse la mise.');
     state.auto = false;

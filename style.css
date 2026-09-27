@@ -1312,3 +1312,6 @@ h1 { font-size: clamp(26px, 7vw, 40px); }
   .buy-btn .buy-icon { width: 78px; }
   .buy-btn .buy-label { font-size: 16px; }
 }
+
+#spin.busy .spin-img { filter: grayscale(0.6) brightness(0.75); }
+#spin.busy { cursor: default; }
