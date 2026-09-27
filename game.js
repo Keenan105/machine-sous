@@ -1458,6 +1458,18 @@ function resize() {
   if (!grainPattern) grainPattern = bctx.createPattern(makeGrain(), 'repeat');
 }
 
+// The right-hand column ends level with the bottom of the control deck.
+function alignSidePanel() {
+  const m = $('#machine'), c = $('#controls');
+  if (!m || !c) return;
+  const below = c.getBoundingClientRect().bottom - m.getBoundingClientRect().bottom;
+  m.style.setProperty('--below', Math.max(0, below) + 'px');
+  const b = $('#boardWrap').getBoundingClientRect(), mt = m.getBoundingClientRect().top;
+  m.style.setProperty('--boardMid', b.top - mt + b.height / 2 + 'px');
+}
+window.addEventListener('resize', alignSidePanel);
+setTimeout(alignSidePanel, 0);
+setTimeout(alignSidePanel, 800);
 let resizeTimer = 0;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 200); });
 window.addEventListener('pointermove', (e) => {
