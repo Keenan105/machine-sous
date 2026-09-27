@@ -94,24 +94,29 @@
     </div>
 
     <section id="zones" aria-label="Frappes du Gardien">
-      <div class="zinfo" data-z="0"><span>Zone I</span><i></i><i></i><i></i></div>
-      <div class="zinfo" data-z="1"><span>Zone II</span><i></i><i></i><i></i></div>
-      <div class="zinfo" data-z="2"><span>Zone III</span><i></i><i></i><i></i></div>
-      <div id="dragonStatus">Gardien endormi</div>
+      <div class="zone-row">
+        <div class="zinfo" data-z="0"><span>Zone I</span><div class="sockets"><i></i><i></i><i></i></div></div>
+        <div class="zinfo" data-z="1"><span>Zone II</span><div class="sockets"><i></i><i></i><i></i></div></div>
+        <div class="zinfo" data-z="2"><span>Zone III</span><div class="sockets"><i></i><i></i><i></i></div></div>
+      </div>
+      <div id="dragonStatus">
+        <svg class="eye" viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-icoeye"/></svg>
+        <span class="txt">Gardien endormi : un symbole dragon le réveille</span>
+      </div>
     </section>
 
     <section id="controls">
-      <div class="stat"><small>Solde</small><b id="balance">1000</b></div>
+      <div class="plaque stat-balance"><small>Solde</small><b id="balance">1000</b></div>
       <div class="bet">
-        <button id="betDown" aria-label="Baisser la mise">−</button>
-        <div class="stat"><small>Mise</small><b id="bet">1</b></div>
-        <button id="betUp" aria-label="Augmenter la mise">+</button>
+        <button id="betDown" class="knob" aria-label="Baisser la mise"><span class="minus"></span></button>
+        <div class="plaque plaque-bet"><small>Mise</small><b id="bet">1</b></div>
+        <button id="betUp" class="knob" aria-label="Augmenter la mise"><span class="plus"></span></button>
       </div>
-      <button id="spin">SPIN</button>
-      <div class="stat"><small>Gain</small><b id="win">0</b></div>
+      <button id="spin" aria-label="Lancer"><span>SPIN</span></button>
+      <div class="plaque stat-win"><small>Gain</small><b id="win">0</b></div>
       <div class="toggles">
-        <button id="auto" title="Auto-spin">AUTO</button>
-        <button id="sound" title="Son">🔊</button>
+        <button id="auto" class="knob" title="Tours automatiques" aria-label="Tours automatiques"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-icoauto"/></svg></button>
+        <button id="sound" class="knob" title="Son" aria-label="Son"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-icosound"/></svg></button>
       </div>
     </section>
 
@@ -138,6 +143,14 @@
       <h2 id="buyTitle">Acheter un bonus</h2>
       <p class="buy-sub">Le bonus démarre tout de suite. Les gains sont calculés sur ta mise actuelle (<b id="buyBet">1</b>).</p>
       <div id="offers"></div>
+      <div id="buyConfirm" hidden>
+        <img id="confirmArt" src="img/bonus.webp" alt="">
+        <p id="confirmText"></p>
+        <div class="confirm-actions">
+          <button id="confirmYes">Oui</button>
+          <button id="confirmNo">Non</button>
+        </div>
+      </div>
       <button id="buyClose">Annuler</button>
     </div>
   </div>

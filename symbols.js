@@ -36,9 +36,29 @@
     <linearGradient id="wxFunnel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4c5f58"/><stop offset=".45" stop-color="#b9cbc3"/><stop offset="1" stop-color="#3e4f49"/></linearGradient>
     <linearGradient id="wxAnvil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9c2b7"/><stop offset=".6" stop-color="#5f766d"/><stop offset="1" stop-color="#2d3b36"/></linearGradient>
     <filter id="wxGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="icoMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c3cddd"/><stop offset="1" stop-color="#7d889c"/></linearGradient>
+    <radialGradient id="icoEye" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#fff6b0"/><stop offset=".35" stop-color="#ffb02e"/><stop offset=".75" stop-color="#d8341e"/><stop offset="1" stop-color="#5a0a12"/></radialGradient>
   </defs>`;
 
   const ART = {
+    icoauto: `
+      <g fill="none" stroke="url(#icoMetal)" stroke-width="5.5" stroke-linecap="round">
+        <path d="M49 25 A19 19 0 0 0 16 20"/>
+        <path d="M15 39 A19 19 0 0 0 48 44"/>
+      </g>
+      <path d="M8 14 L20 30 L26 12 Z" fill="url(#icoMetal)"/>
+      <path d="M56 50 L44 34 L38 52 Z" fill="url(#icoMetal)"/>`,
+    icosound: `
+      <path d="M8 24 H19 L33 11 V53 L19 40 H8 Z" fill="url(#icoMetal)" stroke="#3a4558" stroke-width="1.5" stroke-linejoin="round"/>
+      <g fill="none" stroke="url(#icoMetal)" stroke-width="4.5" stroke-linecap="round"><path d="M41 23 Q47 32 41 41"/><path d="M48 16 Q58 32 48 48"/></g>`,
+    icomute: `
+      <path d="M8 24 H19 L33 11 V53 L19 40 H8 Z" fill="url(#icoMetal)" stroke="#3a4558" stroke-width="1.5" stroke-linejoin="round" opacity=".7"/>
+      <g stroke="#ff6b81" stroke-width="5" stroke-linecap="round"><path d="M42 24 L57 40"/><path d="M57 24 L42 40"/></g>`,
+    icoeye: `
+      <path d="M3 32 C15 13 49 13 61 32 C49 51 15 51 3 32 Z" fill="url(#icoEye)" stroke="#3a0508" stroke-width="2.2"/>
+      <path d="M32 15 C27 24 27 40 32 49 C37 40 37 24 32 15 Z" fill="#120306"/>
+      <ellipse cx="25" cy="25" rx="4" ry="2.5" fill="#fff" opacity=".75" transform="rotate(-25 25 25)"/>`,
+
     wx0: `
       <path d="M16 38 C8 38 6 28 13 25 C12 16 22 12 28 17 C31 9 45 9 47 19 C55 18 59 27 54 33 C57 37 53 40 49 40 L18 40 C17 40 16 39 16 38 Z" fill="url(#wxCloud)" stroke="#6f7b91" stroke-width="1.4" stroke-linejoin="round"/>
       <path d="M17 27 C18 22 23 19 28 21 M30 17 C34 12 42 12 45 19" stroke="#fff" stroke-width="1.6" fill="none" opacity=".8" stroke-linecap="round"/>
@@ -181,7 +201,7 @@
 
   let sprite = '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">' + DEFS;
   for (const [k, body] of Object.entries(ART)) {
-    const vb = k.startsWith('wx') || k === 'bolt' ? '0 0 64 64' : '0 0 100 100';
+    const vb = k.startsWith('wx') || k.startsWith('ico') || k === 'bolt' ? '0 0 64 64' : '0 0 100 100';
     sprite += `<symbol id="sym-${k}" viewBox="${vb}">${body}</symbol>`;
   }
   sprite += '</svg>';

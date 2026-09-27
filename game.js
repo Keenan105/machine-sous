@@ -142,7 +142,7 @@ function updateZonesUI() {
   document.querySelectorAll('.zone').forEach((el) => el.classList.toggle('storm', state.stormZones[+el.dataset.z]));
   const ds = $('#dragonStatus');
   ds.classList.toggle('active', state.dragon);
-  ds.textContent = state.dragon ? 'Le Gardien veille et frappe à chaque éclair' : 'Gardien endormi : un symbole dragon le réveille';
+  ds.querySelector('.txt').textContent = state.dragon ? 'Le Gardien veille et frappe à chaque éclair' : 'Gardien endormi : un symbole dragon le réveille';
   $('#dragon').classList.toggle('active', state.dragon);
 }
 
@@ -688,7 +688,33 @@ function openBuy(kind) {
   $('#buyClose').focus();
 }
 
-function closeBuy() { $('#buyModal').hidden = true; }
+function closeBuy() {
+  $('#buyModal').hidden = true;
+  showOffers();
+}
+
+let pendingKind = null;
+
+// Second step: "are you sure?" with Yes / No.
+function askConfirm(kind) {
+  const o = StormEngine.BONUS_BUYS[kind];
+  pendingKind = kind;
+  $('#confirmArt').src = `img/${BUY_INFO[kind].icon}.webp`;
+  $('#confirmText').innerHTML = `Confirmer l'achat de <b>${o.name}</b> pour <b>${fmt(o.cost * bet())}</b> ?`;
+  $('#offers').hidden = true;
+  $('#buyClose').hidden = true;
+  $('.buy-sub').hidden = true;
+  $('#buyConfirm').hidden = false;
+  $('#confirmNo').focus();
+}
+
+function showOffers() {
+  pendingKind = null;
+  $('#buyConfirm').hidden = true;
+  $('#offers').hidden = false;
+  $('#buyClose').hidden = false;
+  $('.buy-sub').hidden = false;
+}
 
 async function buyBonus(kind) {
   const offer = StormEngine.BONUS_BUYS[kind];
@@ -1802,14 +1828,21 @@ $('#betDown').addEventListener('click', () => { if (!state.busy) { state.betIdx 
 $('#auto').addEventListener('click', () => { state.auto = !state.auto; updateUI(); if (state.auto) spin(); });
 document.querySelectorAll('.buy-btn').forEach((b) => b.addEventListener('click', () => openBuy(b.dataset.kind)));
 $('#buyClose').addEventListener('click', closeBuy);
+$('#confirmYes').addEventListener('click', () => { if (pendingKind) buyBonus(pendingKind); });
+$('#confirmNo').addEventListener('click', showOffers);
 $('#buyModal').addEventListener('click', (e) => {
   if (e.target.id === 'buyModal') closeBuy();
   const btn = e.target.closest('.offer-buy');
-  if (btn && !btn.disabled) buyBonus(btn.dataset.kind);
+  if (btn && !btn.disabled) askConfirm(btn.dataset.kind);
 });
-$('#sound').addEventListener('click', (e) => { audio.init(); e.currentTarget.textContent = audio.toggle() ? '🔊' : '🔇'; });
+$('#sound').addEventListener('click', (e) => {
+  audio.init();
+  const on = audio.toggle();
+  e.currentTarget.querySelector('use').setAttribute('href', on ? '#sym-icosound' : '#sym-icomute');
+  e.currentTarget.classList.toggle('muted', !on);
+});
 document.addEventListener('keydown', (e) => {
-  if (!$('#buyModal').hidden) { if (e.code === 'Escape') closeBuy(); return; }
+  if (!$('#buyModal').hidden) { if (e.code === 'Escape') { if (pendingKind) showOffers(); else closeBuy(); } return; }
   if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SUMMARY') { e.preventDefault(); spin(); }
 });
 
