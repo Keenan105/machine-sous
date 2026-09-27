@@ -52,6 +52,10 @@ for (let r = 0; r < ROWS; r++) {
     const el = document.createElement('div');
     el.className = 'cell';
     el.innerHTML = '<span class="sym"></span><span class="sym old"></span>';
+    // Once a symbol has landed, drop the landing classes so other effects (win, burst, strike…) can play.
+    el.addEventListener('animationend', (e) => {
+      if (e.animationName === 'colIn') el.classList.remove('land', 'leaving');
+    });
     board.appendChild(el);
     cellEls.push(el);
   }
@@ -344,7 +348,17 @@ async function play(step) {
         `  →  +${fmt(step.amount)}` + (step.mult > 1 ? ` (météo ×${step.mult})` : '') +
         (step.cascade > 1 ? `  · cascade ${step.cascade}` : ''));
       updateUI();
-      await sleep(760);
+      await sleep(430);
+      // All winning symbols burst at the same instant and stay gone until the refill.
+      const vanish = step.highlight.filter(([c, r]) => !isSticky(grid[c][r]) || grid[c][r].life === 1);
+      for (const [c, r] of vanish) {
+        const el = cellEl(c, r);
+        el.classList.add('burst');
+        const p = centerOf(el);
+        fx.burst(p.x, p.y, grid[c][r].s === 'wild' ? '#9fe0ff' : '#ffd46b');
+      }
+      audio.pop(vanish.length);
+      await sleep(280);
       break;
     }
 
@@ -578,7 +592,14 @@ const fx = {
   bolts: [],
   hush: false,
   downpour: 0,
+  sparks: [],
   bolt(x1, y1, x2, y2, power = 1) { this.bolts.push(makeBolt(x1, y1, x2, y2, power)); },
+  burst(x, y, color) {
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 4;
+      this.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.5, life: 1, color, s: 1.5 + Math.random() * 2 });
+    }
+  },
 };
 
 // Scenery state — drawn behind the UI.
@@ -1292,6 +1313,18 @@ function drawFx() {
   fx.bolts = fx.bolts.filter((b) => b.life > 0);
   if (fx.flash > 0.3) scene.flash = Math.max(scene.flash, fx.flash * 0.8);
 
+  // sparks from bursting symbols
+  for (const sp of fx.sparks) {
+    sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.18; sp.vx *= 0.97; sp.life -= 0.035;
+    fctx.globalAlpha = Math.max(0, sp.life);
+    fctx.fillStyle = sp.color;
+    fctx.beginPath();
+    fctx.arc(sp.x, sp.y, sp.s * sp.life + 0.4, 0, Math.PI * 2);
+    fctx.fill();
+  }
+  fctx.globalAlpha = 1;
+  fx.sparks = fx.sparks.filter((sp) => sp.life > 0);
+
   // flash
   if (fx.flash > 0) {
     fctx.fillStyle = lvl === 4 ? `rgba(255,220,235,${Math.min(0.85, fx.flash * 0.55)})` : `rgba(215,235,255,${Math.min(0.85, fx.flash * 0.55)})`;
@@ -1424,6 +1457,11 @@ const audio = {
     const scale = [392, 440, 523, 587, 659, 784, 880, 1047];
     const base = Math.min(step - 1, 5);
     [0, 2].forEach((o, i) => this.tone(scale[base + o], 0.12, 0.6, i * 0.07, 'triangle'));
+  },
+  pop(n = 1) {
+    if (!this.ctx) return;
+    this.burst(this.noise, 'bandpass', 1800, Math.min(0.35, 0.1 + n * 0.02), 0.004, 0.18, 0, 500);
+    this.tone(520, 0.12, 0.2, 0, 'triangle', 1040);
   },
   thud(power = 1) {
     if (!this.ctx) return;
