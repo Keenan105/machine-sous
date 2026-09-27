@@ -131,7 +131,7 @@ function updateWeatherUI() {
   const next = LEVELS[state.level + 1];
   const frac = next ? Math.max(0, Math.min(1, (state.intensity - cur.need) / (next.need - cur.need))) : 0;
   // the groove runs from the first to the last medallion: 4 segments
-  $('.groove .energy').style.width = ((state.level + frac) / (LEVELS.length - 1)) * 100 + '%';
+  $('.groove .energy').style.setProperty('--fill', ((state.level + frac) / (LEVELS.length - 1)) * 100 + '%');
   $('#mult').textContent = '×' + String(cur.mult).replace('.', ',');
 }
 

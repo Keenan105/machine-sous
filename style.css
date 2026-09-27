@@ -1318,3 +1318,37 @@ h1 { font-size: clamp(26px, 7vw, 40px); }
 /* bonus buttons show just the price */
 .buy-btn .buy-price { font-size: 13px; letter-spacing: 0.06em; }
 @media (min-width: 1240px) { .buy-btn .buy-price { font-size: 14px; } }
+
+/* ---------- weather + Storm Charge in a column on the right of the machine ---------- */
+#machine { display: flex; flex-direction: column; gap: 8px; }
+#sidePanel { order: -1; display: flex; flex-direction: column; gap: 8px; }
+.groove .energy { width: var(--fill, 0%); transition: width 0.6s cubic-bezier(.2, .9, .3, 1), height 0.6s cubic-bezier(.2, .9, .3, 1); }
+
+@media (min-width: 1240px) {
+  #sidePanel {
+    position: absolute;
+    z-index: 5;
+    left: calc(100% + 26px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 210px;
+  }
+  /* weather: medallions stacked, name and multiplier beside each one */
+  #weather { padding: 12px 12px 10px; }
+  .steps { grid-template-columns: 1fr; gap: 8px; }
+  .step { flex-direction: row; justify-content: flex-start; gap: 10px; text-align: left; }
+  .step .medal { width: 44px; height: 44px; flex: none; }
+  .step small { font-size: 12px; flex: 1; }
+  .step em { font-size: 12px; }
+  .step.on .medal { transform: scale(1.08); }
+  .groove { left: 30px; right: auto; top: 16px; bottom: 44px; width: 6px; height: auto; }
+  .groove .energy { width: 100%; height: var(--fill, 0%); background: linear-gradient(180deg, #4f8fe8, #7fe0ff 30%, #ffd46b 55%, #7fe0b0 75%, #ff4d73); }
+  .mult { margin-top: 10px; }
+  /* Storm Charge: the four cells in a column */
+  #gauge { padding: 10px 12px 12px; }
+  .charge-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .cells { grid-template-columns: 1fr; gap: 6px; }
+  .slot { height: 28px; display: flex; justify-content: flex-start; gap: 8px; padding-left: 10px; }
+  .slot small { position: static; text-align: left; font-size: 10px; }
+  .charge-goal { align-self: center; width: 90px; }
+}
