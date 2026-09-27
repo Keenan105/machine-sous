@@ -955,13 +955,19 @@ function makeBolt(x1, y1, x2, y2, power = 1) {
 function drawBolt(ctx, b, lvl) {
   ctx.save();
   ctx.globalAlpha = Math.max(0, b.life);
-  ctx.strokeStyle = '#eaf6ff';
-  ctx.shadowColor = lvl === 4 ? '#ff7aa8' : '#7fd3ff';
-  ctx.shadowBlur = 24;
-  ctx.lineWidth = 2.5 * b.power;
   ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   ctx.beginPath();
   b.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  // glow: wide soft strokes (much cheaper than shadowBlur), then the white core
+  ctx.strokeStyle = lvl === 4 ? 'rgba(255,122,168,0.18)' : 'rgba(127,211,255,0.18)';
+  ctx.lineWidth = 14 * b.power;
+  ctx.stroke();
+  ctx.strokeStyle = lvl === 4 ? 'rgba(255,122,168,0.35)' : 'rgba(127,211,255,0.35)';
+  ctx.lineWidth = 6 * b.power;
+  ctx.stroke();
+  ctx.strokeStyle = '#eaf6ff';
+  ctx.lineWidth = 2.5 * b.power;
   ctx.stroke();
   ctx.lineWidth = Math.max(0.8, 1.2 * b.power * 0.6);
   for (const br of b.branches) {
@@ -1385,7 +1391,7 @@ function blurredCopy(src, px) {
 }
 
 function resize() {
-  DPR = Math.min(1.75, window.devicePixelRatio || 1);
+  DPR = Math.min(1.5, window.devicePixelRatio || 1);
   BG_DPR = Math.min(1.25, window.devicePixelRatio || 1);          // the scenery is soft: fewer pixels, smoother frames
   W = window.innerWidth;
   H = window.innerHeight;
@@ -2580,7 +2586,7 @@ function drawBackground() {
 
   // eerie glow behind the board at high levels
   if (lvl >= 3) {
-    const c = centerOf(board);
+    const br = boardRect(), c = { x: br.left + br.width / 2, y: br.top + br.height / 2 };
     const rg = bctx.createRadialGradient(c.x, c.y, 10, c.x, c.y, Math.max(W, H) * 0.6);
     rg.addColorStop(0, lvl === 4 ? 'rgba(255,50,110,0.18)' : 'rgba(120,220,180,0.10)');
     rg.addColorStop(1, 'rgba(0,0,0,0)');
@@ -2593,14 +2599,39 @@ function drawBackground() {
   if (scene.flash < 0.01) scene.flash = 0;
 }
 
+// Two pre-rendered coin faces (lit and back), drawn scaled instead of painted every frame.
+const COIN_SPRITES = [0, 1].map((back) => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(22, 22, 2, 32, 32, 30);
+  gr.addColorStop(0, '#fff6c8');
+  gr.addColorStop(0.5, back ? '#d59a20' : '#f5c23e');
+  gr.addColorStop(1, '#8a560c');
+  g.fillStyle = gr;
+  g.beginPath(); g.arc(32, 32, 30, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(255, 236, 170, 0.8)';
+  g.lineWidth = 2.5;
+  g.beginPath(); g.arc(32, 32, 20, 0, Math.PI * 2); g.stroke();
+  return c;
+});
+
+// The board's position, cached (reading layout every frame makes animations stutter).
+let boardBox = null, boardBoxAt = 0;
+function boardRect() {
+  const now = performance.now();
+  if (!boardBox || now - boardBoxAt > 300) { boardBox = board.getBoundingClientRect(); boardBoxAt = now; }
+  return boardBox;
+}
+
 function drawFx() {
   fctx.clearRect(0, 0, W, H);
   const lvl = state.level;
 
   // cyclone around the reels
   if (lvl >= 3 && !fx.hush) {
-    const c = centerOf(board);
-    const rect = board.getBoundingClientRect();
+    const rect = boardRect();
+    const c = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     const want = lvl === 4 ? 110 : 60;
     while (debris.length < want) debris.push({ a: Math.random() * Math.PI * 2, k: 0.85 + Math.random() * 0.35, sp: 0.01 + Math.random() * 0.02, s: 1 + Math.random() * 3, y: Math.random() });
     if (debris.length > want) debris.length = want;
@@ -2667,24 +2698,10 @@ function drawFx() {
   // gold coins raining during the bonus win celebration
   for (const c of fx.coins) {
     c.x += c.vx; c.y += c.vy; c.vy += 0.12; c.a += c.va;
-    const sx = Math.abs(Math.cos(c.a));               // spinning coin: width shrinks and grows
-    fctx.save();
-    fctx.translate(c.x, c.y);
-    fctx.scale(Math.max(0.12, sx), 1);
-    const g = fctx.createRadialGradient(-c.r * 0.3, -c.r * 0.3, 1, 0, 0, c.r);
-    g.addColorStop(0, '#fff6c8');
-    g.addColorStop(0.5, Math.cos(c.a) > 0 ? '#f5c23e' : '#d59a20');
-    g.addColorStop(1, '#8a560c');
-    fctx.fillStyle = g;
-    fctx.beginPath();
-    fctx.arc(0, 0, c.r, 0, Math.PI * 2);
-    fctx.fill();
-    fctx.strokeStyle = 'rgba(255, 236, 170, 0.8)';
-    fctx.lineWidth = 1.2;
-    fctx.beginPath();
-    fctx.arc(0, 0, c.r * 0.68, 0, Math.PI * 2);
-    fctx.stroke();
-    fctx.restore();
+    const sx = Math.max(0.12, Math.abs(Math.cos(c.a)));   // spinning coin: width shrinks and grows
+    const spr = COIN_SPRITES[Math.cos(c.a) > 0 ? 0 : 1];
+    const d = c.r * 2;
+    fctx.drawImage(spr, c.x - (d * sx) / 2, c.y - c.r, d * sx, d);
   }
   fx.coins = fx.coins.filter((c) => c.y < H + 30);
 
