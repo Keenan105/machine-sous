@@ -99,7 +99,7 @@ function updateUI() {
   $('#bet').textContent = fmt(bet());
   $('#win').textContent = fmt(state.spinWin);
   // stays clickable while the reels turn (a second click stops them at once)
-  $('#spin').classList.toggle('busy', state.busy && !state.reelsSpinning);
+  $('#spin').classList.toggle('busy', (state.busy && !state.reelsSpinning) || !!state.cooldown);
   document.querySelectorAll('.buy-btn').forEach((b) => { b.disabled = state.busy; });
   for (const [kind, o] of Object.entries(StormEngine.BONUS_BUYS)) {
     const el = document.querySelector(`.buy-price[data-price="${kind}"]`);
@@ -340,6 +340,7 @@ const REEL_STOP_GAP = 210;   // then they stop one after another, left to right
 const REEL_POOL = ['leaf', 'drop', 'rock', 'ice', 'wolf', 'eagle', 'trident', 'crown', 'charge'];
 
 // Clicking SPIN again while the reels turn stops them all at once ("quick stop").
+const SLAM_COOLDOWN_MS = 700;   // pause after a quick stop before SPIN works again
 let slamWaiters = [];
 function slamStop() {
   state.slam = true;
@@ -811,6 +812,11 @@ async function playPaid(cost, makeResult) {
     if (x >= 50) banner(`ÉNORME GAIN ×${fmt(x)}`, 2200);
     else if (x >= 15) banner(`GROS GAIN ×${fmt(x)}`, 1700);
   }
+  // after a quick stop, a short pause before the next spin can start
+  if (state.slam) {
+    state.cooldown = true;
+    setTimeout(() => { state.cooldown = false; updateUI(); }, SLAM_COOLDOWN_MS);
+  }
   state.busy = false;
   updateUI();
   if (state.auto) setTimeout(() => spin(), 700);
@@ -818,6 +824,7 @@ async function playPaid(cost, makeResult) {
 
 async function spin(forced) {
   if (state.busy) { if (state.reelsSpinning) slamStop(); return; }
+  if (state.cooldown) return;
   if (state.balance < bet() - 1e-9) {
     say('Solde insuffisant : baisse la mise.');
     state.auto = false;
