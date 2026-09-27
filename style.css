@@ -579,11 +579,27 @@ body.rumble #app { animation: rumble 1s linear; }
   animation: buyGlow 2.4s ease-in-out infinite;
 }
 #buyBtn .buy-icon { width: 120px; height: auto; display: block; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.55)); }
+#buyBtn .buy-text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 #buyBtn .buy-label { font-size: 17px; letter-spacing: 0.12em; }
 #buyBtn .buy-sub { font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4a3208; }
 #buyBtn:hover { filter: brightness(1.1); }
 #buyBtn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: default; animation: none; }
 @keyframes buyGlow { 50% { box-shadow: 0 0 30px rgba(255, 210, 90, 0.85); } }
+
+/* Plenty of room beside the machine: a wide, horizontal banner */
+@media (min-width: 1200px) {
+  #buyBtn {
+    flex-direction: row;
+    width: 280px;
+    padding: 10px 16px 10px 10px;
+    gap: 12px;
+    border-radius: 20px;
+  }
+  #buyBtn .buy-icon { width: 160px; flex: none; }
+  #buyBtn .buy-text { flex: 1; }
+  #buyBtn .buy-label { font-size: 22px; letter-spacing: 0.1em; }
+  #buyBtn .buy-sub { font-size: 12px; }
+}
 
 /* Not enough room beside the machine: a vertical tab on the grid's left edge */
 @media (max-width: 959px) {
