@@ -1419,3 +1419,21 @@ h1 { font-size: clamp(24px, 6vw, 34px); }
   .slot small { position: absolute; top: calc(100% + 2px); left: 0; right: 0; text-align: center; font-size: 7.5px; letter-spacing: 0.02em; }
   .charge-goal { align-self: auto; width: 46px; }
 }
+
+/* side column centred on the grid (level with the bonus buttons), a bit larger */
+@media (min-width: 1240px) {
+  #sidePanel { top: 50%; bottom: auto; transform: translateY(-50%); width: 360px; gap: 8px; }
+  #weather { padding: 12px 12px 10px; }
+  .step .medal { width: 52px; height: 52px; }
+  .step small { font-size: 10.5px; }
+  .step em { font-size: 11px; }
+  .groove { top: 32px; height: 7px; }
+  .mult { font-size: 12.5px; margin-top: 8px; }
+  #gauge { padding: 10px 12px 22px; }
+  .charge-head { font-size: 12.5px; margin-bottom: 8px; }
+  .cells { gap: 7px; }
+  .slot { height: 32px; }
+  .slot svg { width: 21px; height: 21px; }
+  .slot small { font-size: 9px; top: calc(100% + 3px); }
+  .charge-goal { width: 58px; }
+}
