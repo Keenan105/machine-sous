@@ -129,18 +129,125 @@
 
   <div id="rulesModal" hidden>
     <div class="buy-card rules-card" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
-      <h2 id="rulesTitle">Règles &amp; table des gains</h2>
-      <div id="paytable"></div>
-      <ul class="rules">
-        <li><b>Gains partout :</b> 8 symboles identiques ou plus, n'importe où sur la grille 6×5 (Wilds compris, avec au moins 4 vrais symboles). Les gagnants explosent et d'autres tombent en cascade.</li>
-        <li><b>Météo :</b> chaque tour commence sous la Pluie. Chaque cascade gagnante renforce la tempête (Vent ×1,5 → Orage ×2 → Supercellule ×3 → STORMBOUND ×5), et le multiplicateur s'applique aux gains suivants.</li>
-        <li><b>Storm Charge :</b> chaque éclair remplit un quart de la jauge. À 2 puis à 3 éclairs, un événement aléatoire se produit : Éclair, Rafale, Pluie torrentielle ou Œil du cyclone.</li>
-        <li><b>Eye of the Storm :</b> 4 éclairs dans un tour : silence… puis BOOM. 8 tours gratuits avec des Storm Wilds collants (3 vies). La tempête ne redescend plus d'un tour gratuit à l'autre, et 4 nouveaux éclairs ajoutent 3 tours.</li>
-        <li><b>Achat de bonus :</b> les boutons BONUS et SUPER lancent directement 6 tours gratuits : Eye of the Storm (20× la mise, 1 Storm Wild) ou Super Eye of the Storm (32× la mise, 1 à 2 Storm Wilds et le Gardien qui frappe à chaque tour). RTP de l'achat ≈ 96 %. Le bonus gagné avec 4 éclairs reste plus grand (8 tours).</li>
-        <li><b>Le Gardien :</b> quand il apparaît, il devient Wild et frappe la grille. Pendant le bonus, il frappe à chaque tour et à chaque éclair. Au bout de 3 frappes au même endroit, la zone devient une <i>zone de tempête</i> : plus d'éclairs, plus de symboles premium, et des Wilds.</li>
-      </ul>
-      <p class="note" id="mathInfo"></p>
-      <p class="note">Prototype de démonstration : crédits fictifs, aucun argent réel.</p>
+      <h2 id="rulesTitle">Règles du jeu</h2>
+      <nav class="rules-nav" aria-label="Sections des règles">
+        <a href="#r-but">But</a><a href="#r-jouer">Jouer</a><a href="#r-gains">Gains</a><a href="#r-meteo">Météo</a>
+        <a href="#r-charge">Storm Charge</a><a href="#r-speciaux">Spéciaux</a><a href="#r-bonus">Bonus</a><a href="#r-achat">Achat</a><a href="#r-chiffres">Chiffres</a>
+      </nav>
+      <div class="rules-body">
+
+        <section id="r-but">
+          <h3><span>1</span> Le but</h3>
+          <p>Aligner <b>8 symboles identiques ou plus</b>, n'importe où sur la grille de 6 colonnes et 5 rangées. Il n'y a pas de lignes : seule la quantité compte. Chaque cascade gagnante fait monter la tempête, qui multiplie les gains suivants.</p>
+        </section>
+
+        <section id="r-jouer">
+          <h3><span>2</span> Jouer un tour</h3>
+          <ol>
+            <li>Choisis ta <b>mise</b> avec − et + (de 0,20 à 50).</li>
+            <li>Appuie sur le <b>bouton couronne</b> ou sur la touche <kbd>T</kbd>.</li>
+            <li>Les symboles de la partie précédente tombent, puis les nouveaux arrivent colonne par colonne.</li>
+            <li>Le gain du tour s'affiche dans <b>Gain</b> et s'ajoute au <b>Solde</b>.</li>
+          </ol>
+          <table class="rules-table">
+            <tr><th>Bouton</th><th>Rôle</th></tr>
+            <tr><td>Couronne / <kbd>T</kbd></td><td>Lance un tour</td></tr>
+            <tr><td>− / +</td><td>Baisse ou augmente la mise</td></tr>
+            <tr><td>Flèches circulaires</td><td>Tours automatiques (reclique pour arrêter)</td></tr>
+            <tr><td>Haut-parleur</td><td>Coupe ou remet le son</td></tr>
+            <tr><td>BONUS / SUPER</td><td>Achète un bonus (voir section 8)</td></tr>
+          </table>
+        </section>
+
+        <section id="r-gains">
+          <h3><span>3</span> Gains et cascades</h3>
+          <ul>
+            <li>Un gain demande <b>8 symboles identiques ou plus</b>. Les Wilds comptent, mais il faut au moins <b>4 vrais symboles</b>.</li>
+            <li>Le gain dépend du symbole et du nombre : <b>8–9</b>, <b>10–11</b> ou <b>12 et plus</b>. Les montants ci-dessous sont en multiples de la mise.</li>
+            <li>Plusieurs symboles peuvent gagner en même temps : les gains s'additionnent.</li>
+            <li><b>Cascade :</b> les symboles gagnants éclatent, les autres descendent, de nouveaux tombent du haut. Tant qu'il y a un gain, ça continue, sans rien payer de plus.</li>
+          </ul>
+          <div id="paytable"></div>
+        </section>
+
+        <section id="r-meteo">
+          <h3><span>4</span> La météo (multiplicateur)</h3>
+          <p>Chaque tour commence sous la <b>Pluie</b>. Chaque cascade gagnante fait monter la tempête, et le multiplicateur s'applique <b>aux gains suivants</b> de ce tour.</p>
+          <table class="rules-table">
+            <tr><th>Niveau</th><th>Atteint après</th><th>Multiplicateur</th></tr>
+            <tr><td>Pluie</td><td>départ</td><td>×1</td></tr>
+            <tr><td>Vent</td><td>2 cascades gagnantes</td><td>×1,5</td></tr>
+            <tr><td>Orage</td><td>4 cascades</td><td>×2</td></tr>
+            <tr><td>Supercellule</td><td>7 cascades</td><td>×3</td></tr>
+            <tr><td>Stormbound</td><td>11 cascades</td><td>×5</td></tr>
+          </table>
+          <p class="hint">La météo repart à la Pluie au tour suivant, sauf pendant les tours gratuits.</p>
+        </section>
+
+        <section id="r-charge">
+          <h3><span>5</span> Storm Charge et événements</h3>
+          <p>Chaque symbole <b>éclair</b> qui tombe est aspiré dans la jauge et allume une case sur 4. Les éclairs arrivés pendant les cascades comptent aussi. La jauge repart à zéro à chaque tour.</p>
+          <table class="rules-table">
+            <tr><th>Éclairs</th><th>Effet</th></tr>
+            <tr><td>2</td><td>Un événement surprise</td></tr>
+            <tr><td>3</td><td>Un deuxième événement surprise</td></tr>
+            <tr><td>4</td><td>Le bonus <b>Eye of the Storm</b></td></tr>
+          </table>
+          <dl class="rules-dl">
+            <dt>Éclair</dt><dd>2 à 4 cases sont frappées et transformées en un même symbole (souvent le plus présent, parfois un symbole de valeur).</dd>
+            <dt>Rafale</dt><dd>Le vent pousse chaque rangée d'une case, dans un sens puis dans l'autre, puis 2 cases rejoignent le symbole le plus présent.</dd>
+            <dt>Pluie torrentielle</dt><dd>Les 2 rangées du bas de chaque colonne sont remplacées ; les nouveaux symboles favorisent un même symbole.</dd>
+            <dt>Œil du cyclone</dt><dd>3 à 5 cases deviennent cachées, puis se révèlent toutes en un même symbole de valeur (loup, aigle, trident ou couronne).</dd>
+          </dl>
+        </section>
+
+        <section id="r-speciaux">
+          <h3><span>6</span> Symboles spéciaux</h3>
+          <dl class="rules-dl">
+            <dt>Storm Wild (vortex)</dt><dd>Remplace n'importe quel symbole payant. Les Storm Wilds du bonus sont <b>collants</b> : ils restent en place 3 vies, et perdent une vie à chaque cascade gagnante et à chaque tour gratuit.</dd>
+            <dt>Éclair</dt><dd>Ne paie pas : il remplit la Storm Charge (section 5).</dd>
+            <dt>Gardien (dragon)</dt><dd>Quand il apparaît, il devient un Wild et frappe une zone de la grille : 2 cases de cette zone deviennent des symboles de valeur. Il frappe aussi à chaque événement Éclair.</dd>
+            <dt>Zones de tempête</dt><dd>La grille compte 3 zones de 2 colonnes. Après <b>3 frappes</b> du Gardien dans la même zone, elle devient une <b>zone de tempête</b> pour le reste du tour : plus d'éclairs, plus de symboles de valeur et des Wilds y tombent.</dd>
+          </dl>
+        </section>
+
+        <section id="r-bonus">
+          <h3><span>7</span> Le bonus Eye of the Storm</h3>
+          <p>Se déclenche avec <b>4 éclairs dans un même tour</b> (en moyenne 1 tour sur 240 environ). Après un silence et un grand coup de tonnerre :</p>
+          <ul>
+            <li><b>8 tours gratuits</b>, joués à ta mise, sans rien payer.</li>
+            <li><b>2 à 3 Storm Wilds collants</b> posés sur la grille.</li>
+            <li>La tempête démarre au <b>Vent</b> et <b>ne redescend pas</b> d'un tour gratuit à l'autre.</li>
+            <li>Le <b>Gardien</b> est réveillé et frappe à chaque tour.</li>
+            <li><b>4 nouveaux éclairs</b> pendant le bonus : <b>+3 tours gratuits</b> et 2 Storm Wilds de plus.</li>
+          </ul>
+          <p class="hint">À la fin, le total du bonus défile à l'écran. Clique pour passer ou continuer.</p>
+        </section>
+
+        <section id="r-achat">
+          <h3><span>8</span> Acheter un bonus</h3>
+          <p>Les boutons à gauche de la grille lancent un bonus tout de suite. Le prix suit ta mise, et une confirmation <b>Oui / Non</b> est demandée avant de payer.</p>
+          <table class="rules-table">
+            <tr><th>Bonus</th><th>Prix</th><th>Contenu</th></tr>
+            <tr><td>BONUS<br><small>Eye of the Storm</small></td><td>20× la mise</td><td>6 tours gratuits, 1 Storm Wild collant, départ sous la Pluie</td></tr>
+            <tr><td>SUPER<br><small>Super Eye of the Storm</small></td><td>32× la mise</td><td>6 tours gratuits, 1 à 2 Storm Wilds collants, le Gardien frappe à chaque tour</td></tr>
+          </table>
+          <p class="hint">Le bonus gagné naturellement (8 tours) est plus grand que les bonus achetés.</p>
+        </section>
+
+        <section id="r-chiffres">
+          <h3><span>9</span> Chiffres clés</h3>
+          <table class="rules-table">
+            <tr><td>Retour moyen au joueur (RTP)</td><td>≈ 96 % (jeu de base et achats)</td></tr>
+            <tr><td>Tours gagnants</td><td>environ 1 sur 4</td></tr>
+            <tr><td>Bonus naturel</td><td>environ 1 tour sur 240</td></tr>
+            <tr><td>Gain maximum</td><td>5 000× la mise par tour</td></tr>
+            <tr><td>Mises</td><td>0,20 · 0,50 · 1 · 2 · 5 · 10 · 20 · 50</td></tr>
+          </table>
+          <p class="note" id="mathInfo"></p>
+          <p class="note">Chaque tour est indépendant : les tours précédents n'influencent pas le suivant. Prototype de démonstration : crédits fictifs, aucun argent réel.</p>
+        </section>
+      </div>
       <button id="rulesClose">Fermer</button>
     </div>
   </div>

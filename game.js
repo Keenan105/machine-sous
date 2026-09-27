@@ -2270,6 +2270,10 @@ $('#buyClose').addEventListener('click', closeBuy);
 const openRules = () => { $('#rulesModal').hidden = false; $('#rulesClose').focus(); };
 const closeRules = () => { $('#rulesModal').hidden = true; };
 $('#rulesBtn').addEventListener('click', openRules);
+document.querySelectorAll('.rules-nav a').forEach((a) => a.addEventListener('click', (e) => {
+  e.preventDefault();
+  document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+}));
 $('#rulesClose').addEventListener('click', closeRules);
 $('#rulesModal').addEventListener('click', (e) => { if (e.target.id === 'rulesModal') closeRules(); });
 $('#confirmYes').addEventListener('click', () => { if (pendingKind) buyBonus(pendingKind); });
