@@ -103,7 +103,7 @@ function updateUI() {
   document.querySelectorAll('.buy-btn').forEach((b) => { b.disabled = state.busy; });
   for (const [kind, o] of Object.entries(StormEngine.BONUS_BUYS)) {
     const el = document.querySelector(`.buy-price[data-price="${kind}"]`);
-    if (el) el.textContent = fmt(o.cost * bet());
+    if (el) el.textContent = `${fmt(o.cost * bet())} CHF`;
   }
   $('#auto').classList.toggle('on', state.auto);
 }
