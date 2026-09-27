@@ -925,6 +925,7 @@ const scene = {
   dragonA: 0,
   dragonX: -400,
   rush: 0,         // speeds up sky changes during a level transition
+  glows: [],       // lightning lighting the clouds from inside
   px: 0, py: 0,    // parallax offset (pointer)
   tpx: 0, tpy: 0,
 };
@@ -941,7 +942,7 @@ let wind = WIND[0];
 let t = 0;
 const drops = [];
 const debris = [];
-let clouds = [], cloudSprites = [], ranges = [], ruins = null, treesMid = [], treesFront = [];
+let ranges = [], ruins = null, treesMid = [], treesFront = [];
 let grass = [], puddles = [], ripples = [], splashes = [], leaves = [], embers = [], birds = [], stars = [], fog = [];
 
 const lerp = (a, b, k) => a + (b - a) * k;
@@ -949,46 +950,180 @@ const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 const mix = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const rnd = (a, b) => a + Math.random() * (b - a);
 
-function makeCloudSprite(w, h) {
+/* --- procedural noise: clouds and rock texture --- */
+const PERM = (() => {
+  const a = [...Array(256).keys()];
+  for (let i = 255; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  const p = new Uint8Array(512);
+  for (let i = 0; i < 512; i++) p[i] = a[i & 255];
+  return p;
+})();
+const GRAD = [[1, 1], [-1, 1], [1, -1], [-1, -1], [1, 0], [-1, 0], [0, 1], [0, -1]];
+
+// Gradient noise in [-1, 1]; `period` makes it tile horizontally.
+function perlin(x, y, period) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x - xi, yf = y - yi;
+  const px = period || 4096;
+  const X0 = ((xi % px) + px) % px, X1 = (X0 + 1) % px, Y0 = yi & 255, Y1 = (yi + 1) & 255;
+  const g = (X, Y, dx, dy) => { const h = GRAD[PERM[PERM[X & 255] + Y] & 7]; return h[0] * dx + h[1] * dy; };
+  const u = xf * xf * xf * (xf * (xf * 6 - 15) + 10);
+  const v = yf * yf * yf * (yf * (yf * 6 - 15) + 10);
+  const a = g(X0, Y0, xf, yf) + u * (g(X1, Y0, xf - 1, yf) - g(X0, Y0, xf, yf));
+  const b = g(X0, Y1, xf, yf - 1) + u * (g(X1, Y1, xf - 1, yf - 1) - g(X0, Y1, xf, yf - 1));
+  return a + v * (b - a);
+}
+
+function fbm(x, y, oct, period) {
+  let sum = 0, amp = 0.5, f = 1, norm = 0;
+  for (let i = 0; i < oct; i++) {
+    sum += amp * perlin(x * f, y * f, period ? period * f : 0);
+    norm += amp;
+    amp *= 0.5;
+    f *= 2;
+  }
+  return sum / norm;
+}
+
+const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+
+// A horizontally tiling sheet of volumetric cloud, lit from above. Built at low resolution, drawn scaled up.
+function makeCloudSheet(w, h, o) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
   const g = c.getContext('2d');
-  const puffs = 46;
-  for (let i = 0; i < puffs; i++) {
-    const u = Math.random();
-    const x = w * (0.12 + u * 0.76);
-    const hump = Math.sin(u * Math.PI);                 // taller in the middle
-    const r = h * (0.12 + Math.random() * 0.16) * (0.6 + hump * 0.7);
-    const y = h * 0.72 - hump * h * 0.3 * Math.random() - r * 0.2;
-    const grd = g.createRadialGradient(x - r * 0.2, y - r * 0.45, r * 0.05, x, y, r);
-    grd.addColorStop(0, 'rgba(240,244,252,0.95)');
-    grd.addColorStop(0.45, 'rgba(170,180,198,0.75)');
-    grd.addColorStop(0.85, 'rgba(95,104,124,0.35)');
-    grd.addColorStop(1, 'rgba(80,90,110,0)');
-    g.fillStyle = grd;
-    g.beginPath();
-    g.arc(x, y, r, 0, Math.PI * 2);
-    g.fill();
+  const img = g.createImageData(w, h);
+  const px = img.data;
+  const unit = o.cells / w;
+  const dens = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const vy = y / h;
+    const env = smooth(0, o.top, vy) * (1 - smooth(o.bottom, 1, vy));
+    for (let x = 0; x < w; x++) {
+      const n = fbm(x * unit, y * unit * o.squash + o.seed, 5, o.cells) * 1.5 + 0.5;
+      dens[y * w + x] = Math.max(0, Math.min(1, (n - o.cover) / 0.32)) * env;
+    }
   }
-  // shadowed flat underside
-  const under = g.createLinearGradient(0, h * 0.55, 0, h);
-  under.addColorStop(0, 'rgba(40,46,60,0)');
-  under.addColorStop(1, 'rgba(40,46,60,0.55)');
-  g.globalCompositeOperation = 'source-atop';
-  g.fillStyle = under;
-  g.fillRect(0, 0, w, h);
+  const off = Math.max(2, Math.round(h * 0.025));
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const d = dens[i];
+      if (d <= 0.001) { px[i * 4 + 3] = 0; continue; }
+      const above = y >= off ? dens[i - off * w] : 0;
+      const shade = Math.max(0, Math.min(1, 0.95 - above * 0.75 + (d - above) * 0.35));
+      const lum = 38 + 200 * shade * (0.75 + 0.25 * (1 - y / h));
+      px[i * 4] = lum * 0.92;
+      px[i * 4 + 1] = lum * 0.95;
+      px[i * 4 + 2] = Math.min(255, lum * 1.04);
+      px[i * 4 + 3] = Math.min(255, Math.pow(d, 0.8) * 255 * o.alpha);
+    }
+  }
+  g.putImageData(img, 0, 0);
   return c;
 }
 
-function makeRange(y0, amp, freq, jag) {
-  const ph = [rnd(0, 9), rnd(0, 9), rnd(0, 9)];
+// Ridged noise gives sharp, natural mountain crests.
+function ridged(u, seed, oct = 5) {
+  let sum = 0, amp = 0.55, f = 1, norm = 0;
+  for (let i = 0; i < oct; i++) {
+    const r = 1 - Math.abs(perlin(u * f, seed + i * 7.3));
+    sum += amp * r * r;
+    norm += amp;
+    amp *= 0.5;
+    f *= 2.1;
+  }
+  return sum / norm;
+}
+
+// A pine drawn branch by branch, as a black silhouette.
+function makePineSprite(h) {
+  const w = Math.round(h * 0.5);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  g.strokeStyle = g.fillStyle = '#000';
+  g.lineCap = 'round';
+  g.fillRect(w / 2 - h * 0.012, h * 0.35, h * 0.024, h * 0.65);
+  const tiers = Math.round(h / 4.2);
+  for (let i = 0; i < tiers; i++) {
+    const k = i / tiers;
+    const y = h * 0.97 - k * h * 0.9;
+    const bw = Math.pow(1 - k, 0.85) * w * 0.47 * rnd(0.7, 1.1);
+    for (const side of [-1, 1]) {
+      g.lineWidth = Math.max(0.8, (1 - k) * h * 0.018);
+      g.beginPath();
+      g.moveTo(w / 2, y - 2);
+      g.quadraticCurveTo(w / 2 + side * bw * 0.5, y - bw * 0.08, w / 2 + side * bw, y + bw * 0.28);
+      g.stroke();
+      g.lineWidth = Math.max(0.6, g.lineWidth * 0.55);
+      for (let n = 0; n < 5; n++) {
+        const u = rnd(0.25, 1);
+        const bx = w / 2 + side * bw * u, by = y - 1 + bw * 0.28 * u * u;
+        g.beginPath();
+        g.moveTo(bx, by);
+        g.lineTo(bx + side * rnd(0.5, 2.5), by + rnd(1.5, 4.5));
+        g.stroke();
+      }
+    }
+  }
+  g.beginPath();
+  g.moveTo(w / 2 - 1.2, h * 0.08);
+  g.lineTo(w / 2, 0);
+  g.lineTo(w / 2 + 1.2, h * 0.08);
+  g.fill();
+  return c;
+}
+
+// A bare, storm-bent tree for variety.
+function makeDeadTreeSprite(h) {
+  const w = Math.round(h * 0.8);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  g.strokeStyle = '#000';
+  g.lineCap = 'round';
+  const branch = (x, y, len, ang, width, depth) => {
+    const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+    g.lineWidth = width;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo((x + x2) / 2 + rnd(-3, 3), (y + y2) / 2 + rnd(-3, 3), x2, y2);
+    g.stroke();
+    if (depth <= 0 || len < 4) return;
+    const n = depth > 3 ? 2 : 2 + rand(2);
+    for (let i = 0; i < n; i++) branch(x2, y2, len * rnd(0.55, 0.78), ang + rnd(-0.75, 0.75), width * 0.66, depth - 1);
+  };
+  branch(w / 2, h, h * 0.32, -Math.PI / 2 + rnd(-0.1, 0.1), h * 0.045, 6);
+  return c;
+}
+
+function makeFogSprite() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 128;
+  const g = c.getContext('2d');
+  const rg = g.createRadialGradient(128, 64, 0, 128, 64, 128);
+  rg.addColorStop(0, 'rgba(215,222,234,0.9)');
+  rg.addColorStop(0.5, 'rgba(215,222,234,0.35)');
+  rg.addColorStop(1, 'rgba(215,222,234,0)');
+  g.fillStyle = rg;
+  g.fillRect(0, 0, 256, 128);
+  return c;
+}
+
+// A mountain range from ridged noise, plus a pre-rendered rock texture (slope light, strata) and snow.
+function makeRange(y0, amp, cells, seed, snow) {
   const pts = [];
-  for (let x = -80; x <= W + 80; x += 5) {
-    const v = 0.55 * (1 - Math.abs(Math.sin(x * freq + ph[0])))
-      + 0.3 * (1 - Math.abs(Math.sin(x * freq * 2.3 + ph[1])))
-      + jag * Math.sin(x * freq * 7.1 + ph[2]);
-    pts.push([x, y0 - amp * v]);
+  for (let x = -80; x <= W + 80; x += 4) {
+    const u = (x + 80) / (W + 160) * cells;
+    // big peaks from low-frequency noise, sharp crests from ridged noise on top
+    const big = Math.pow(Math.max(0, Math.min(1, fbm(u, seed, 4) * 1.1 + 0.5)), 1.5);
+    const crest = ridged(u * 2.6, seed + 3, 4);
+    pts.push([x, y0 - amp * (big * 0.82 + crest * 0.28)]);
   }
   const p = new Path2D();
   p.moveTo(-80, H + 10);
@@ -997,7 +1132,50 @@ function makeRange(y0, amp, freq, jag) {
   p.closePath();
   const ridge = new Path2D();
   pts.forEach(([x, y], i) => (i ? ridge.lineTo(x, y) : ridge.moveTo(x, y)));
-  return { p, ridge, pts };
+
+  // texture at 40% resolution
+  const S = 0.4;
+  const tw = Math.ceil((W + 160) * S), th = Math.ceil(H * S);
+  const tex = document.createElement('canvas');
+  tex.width = tw;
+  tex.height = th;
+  const g = tex.getContext('2d');
+  const img = g.createImageData(tw, th);
+  const d = img.data;
+  const snowC = snow ? document.createElement('canvas') : null;
+  let sImg = null;
+  if (snowC) { snowC.width = tw; snowC.height = th; sImg = snowC.getContext('2d').createImageData(tw, th); }
+  const top = Math.min(...pts.map((q) => q[1]));
+  for (let X = 0; X < tw; X++) {
+    const wx = X / S - 80;
+    const idx = Math.max(1, Math.min(pts.length - 2, Math.round((wx + 80) / 4)));
+    const ry = pts[idx][1];
+    const a0 = Math.max(0, idx - 4), a1 = Math.min(pts.length - 1, idx + 4);
+    const slope = (pts[a0][1] - pts[a1][1]) / ((a1 - a0) * 4);        // smoothed; > 0: face turned to the light (left)
+    const peak = (y0 - ry) / amp;
+    for (let Y = Math.floor(top * S); Y < th; Y++) {
+      const wy = Y / S;
+      if (wy < ry) continue;
+      const depth = wy - ry;
+      const fade = Math.exp(-depth / (amp * 0.35));
+      const rock = fbm(wx * 0.006, wy * 0.028 + seed, 3);              // stretched: horizontal strata
+      const grain = perlin(wx * 0.08, wy * 0.08);
+      const lum = Math.max(0, Math.min(1, 0.5 + Math.max(-0.35, Math.min(0.35, slope * 0.45)) * fade + rock * 0.28 + grain * 0.06 - depth / (amp * 5)));
+      const i = (Y * tw + X) * 4;
+      d[i] = d[i + 1] = d[i + 2] = lum * 255;
+      d[i + 3] = 255;
+      if (sImg && peak > 0.5) {
+        const line = amp * (0.06 + 0.12 * (peak - 0.5)) * (0.7 + 0.6 * (fbm(wx * 0.03, seed + 5, 2) * 0.5 + 0.5));
+        if (depth < line) {
+          const a = (1 - depth / line) * Math.max(0, Math.min(1, 0.6 + slope * 0.8 + rock * 0.4));
+          sImg.data[i] = 225; sImg.data[i + 1] = 232; sImg.data[i + 2] = 245; sImg.data[i + 3] = a * 255;
+        }
+      }
+    }
+  }
+  g.putImageData(img, 0, 0);
+  if (snowC) snowC.getContext('2d').putImageData(sImg, 0, 0);
+  return { p, ridge, pts, tex, snow: snowC };
 }
 
 function ridgeY(range, x) {
@@ -1046,52 +1224,55 @@ function makeRuins(hx, hy, s) {
 }
 
 function makeTree(x, h, kind) {
-  return { x, h, kind, p: rnd(0, 6), w: rnd(0.8, 1.2) };
+  return { x, h, kind, p: rnd(0, 6), w: rnd(0.8, 1.2), sp: kind === 'dead' ? rand(deadSprites.length) : rand(pineSprites.length) };
 }
 
+let cloudSheets = [], pineSprites = [], deadSprites = [], fogSprite = null, vignettes = [];
+let BG_DPR = 1;
+
 function resize() {
-  DPR = Math.min(2, window.devicePixelRatio || 1);
+  DPR = Math.min(1.75, window.devicePixelRatio || 1);
+  BG_DPR = Math.min(1.25, window.devicePixelRatio || 1);          // the scenery is soft: fewer pixels, smoother frames
   W = window.innerWidth;
   H = window.innerHeight;
   GROUND = H - Math.max(46, H * 0.07);
-  for (const cv of [bg, fxc]) { cv.width = W * DPR; cv.height = H * DPR; }
-  bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bg.width = W * BG_DPR; bg.height = H * BG_DPR;
+  fxc.width = W * DPR; fxc.height = H * DPR;
+  bctx.setTransform(BG_DPR, 0, 0, BG_DPR, 0, 0);
   fctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  cloudLayer.width = W;
-  cloudLayer.height = H;
+  cloudLayer.width = Math.ceil(W * 0.75);
+  cloudLayer.height = Math.ceil(H * 0.75);
 
-  const S = Math.min(1.4, Math.max(0.55, W / 1100));
-  cloudSprites = [0, 1, 2, 3, 4].map(() => makeCloudSprite(Math.round(460 * S), Math.round(200 * S)));
-  clouds = [];
-  for (let i = 0; i < 14; i++) {
-    const back = i < 8;
-    clouds.push({
-      back,
-      x: rnd(-300, W),
-      y: back ? rnd(-40, H * 0.22) : rnd(H * 0.05, H * 0.34),
-      s: back ? rnd(0.9, 1.5) : rnd(0.7, 1.2),
-      v: back ? rnd(0.5, 0.8) : rnd(1, 1.5),
-      sp: rand(cloudSprites.length),
-      glow: 0,
-    });
-  }
+  const cw = Math.ceil(Math.max(W, 900) * 0.5);
+  cloudSheets = [
+    { c: makeCloudSheet(cw, Math.ceil(H * 0.26), { cells: 7, seed: 3.1, cover: 0.44, alpha: 0.95, top: 0.05, bottom: 0.55, squash: 1.9 }), y: -0.02, hk: 0.52, v: 0.18, par: 4 },
+    { c: makeCloudSheet(cw, Math.ceil(H * 0.24), { cells: 5, seed: 9.7, cover: 0.5, alpha: 1, top: 0.12, bottom: 0.5, squash: 1.6 }), y: 0.04, hk: 0.48, v: 0.4, par: 9 },
+    { c: makeCloudSheet(cw, Math.ceil(H * 0.14), { cells: 4, seed: 21.3, cover: 0.58, alpha: 0.9, top: 0.2, bottom: 0.55, squash: 1.4 }), y: 0.33, hk: 0.28, v: 0.9, par: 14 },
+  ];
+  cloudSheets.forEach((sh) => (sh.x = rnd(0, 1000)));
 
   ranges = [
-    makeRange(H * 0.62, H * 0.2, 0.0042, 0.05),
-    makeRange(H * 0.72, H * 0.17, 0.0065, 0.07),
-    makeRange(H * 0.84, H * 0.1, 0.009, 0.05),
+    makeRange(H * 0.62, H * 0.26, 2.2, 1.7, true),
+    makeRange(H * 0.74, H * 0.16, 3.4, 5.3, false),
+    makeRange(H * 0.86, H * 0.09, 5, 8.9, false),
   ];
   const hx = W * 0.2;
   ruins = makeRuins(hx, ridgeY(ranges[1], hx) + 6, Math.max(0.45, Math.min(1.1, W / 1300)));
 
+  if (!pineSprites.length) {
+    pineSprites = [0, 1, 2, 3, 4, 5].map(() => makePineSprite(Math.round(rnd(150, 200))));
+    deadSprites = [0, 1].map(() => makeDeadTreeSprite(180));
+    fogSprite = makeFogSprite();
+  }
   treesMid = [];
-  for (let x = -20; x < W + 20; x += rnd(18, 34)) {
+  for (let x = -20; x < W + 20; x += rnd(9, 22)) {
     if (Math.abs(x - hx) < 150 * ruins.s) continue;
-    treesMid.push(makeTree(x, rnd(22, 46), Math.random() < 0.75 ? 'pine' : 'oak'));
+    treesMid.push(makeTree(x, rnd(24, 52), 'pine'));
   }
   treesFront = [];
-  const nf = Math.max(7, Math.round(W / 85));
-  for (let i = 0; i < nf; i++) treesFront.push(makeTree((i + rnd(0, 0.7)) * (W / nf), rnd(70, 150), Math.random() < 0.7 ? 'pine' : 'oak'));
+  const nf = Math.max(8, Math.round(W / 70));
+  for (let i = 0; i < nf; i++) treesFront.push(makeTree((i + rnd(0, 0.8)) * (W / nf), rnd(90, 190), Math.random() < 0.12 ? 'dead' : 'pine'));
+  treesFront.sort((a, b) => a.h - b.h);
 
   grass = [];
   for (let x = 0; x < W; x += REDUCED ? 7 : 3.5) grass.push({ x: x + rnd(-1, 1), h: rnd(8, 22), p: rnd(0, 6) });
@@ -1101,9 +1282,18 @@ function resize() {
   for (let i = 0; i < 90; i++) stars.push({ x: rnd(0, W), y: rnd(0, H * 0.45), r: rnd(0.4, 1.3), p: rnd(0, 6) });
   birds = [0, 1, 2].map((i) => makeFlock(rnd(-0.2, 1) * W, i));
   fog = [];
-  for (let i = 0; i < 7; i++) fog.push({ x: rnd(0, W), y: rnd(H * 0.6, GROUND), r: rnd(W * 0.15, W * 0.35), v: rnd(0.1, 0.35) });
+  for (let i = 0; i < 8; i++) fog.push({ x: rnd(0, W), y: rnd(H * 0.58, GROUND), r: rnd(W * 0.18, W * 0.4), v: rnd(0.1, 0.35), a: rnd(0.5, 1) });
+  vignettes = [0, 1, 2, 3, 4].map((l) => {
+    const g = bctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.3, W / 2, H * 0.5, Math.max(W, H) * 0.8);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, l === 4 ? 'rgba(40,0,10,0.65)' : `rgba(0,0,0,${0.35 + l * 0.07})`);
+    return g;
+  });
+  scene.glows = [];
 }
-window.addEventListener('resize', resize);
+
+let resizeTimer = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 200); });
 window.addEventListener('pointermove', (e) => {
   scene.tpx = (e.clientX / W - 0.5) * 2;
   scene.tpy = (e.clientY / H - 0.5) * 2;
@@ -1153,41 +1343,48 @@ function drawSky(lvl) {
   }
 }
 
-function drawCloudLayer(back, lvl) {
+// Draws one tiling cloud sheet, tinted to the sky; lightning lights it from inside.
+function drawClouds(i, lvl) {
+  const sh = cloudSheets[i];
+  if (!sh) return;
+  const K = 0.75;                                         // cloud layer canvas scale
+  const cw = cloudLayer.width, chh = cloudLayer.height;
+  cctx.setTransform(1, 0, 0, 1, 0, 0);
   cctx.globalCompositeOperation = 'source-over';
-  cctx.clearRect(0, 0, W, H);
-  const cover = [0.55, 0.72, 0.86, 0.95, 1][lvl];
-  for (const cl of clouds) {
-    if (cl.back !== back) continue;
-    const spr = cloudSprites[cl.sp];
-    const w = spr.width * cl.s, h = spr.height * cl.s;
-    cl.x += (0.05 + wind * 1.2) * cl.v;
-    if (cl.x > W + 40) { cl.x = -w - rnd(0, 200); cl.y = back ? rnd(-40, H * 0.22) : rnd(H * 0.05, H * 0.34); }
-    const x = cl.x - scene.px * (back ? 5 : 10);
-    const y = cl.y + Math.sin(t * 0.3 + cl.sp) * 4 - scene.py * (back ? 3 : 6);
-    cctx.globalAlpha = cover;
-    cctx.drawImage(spr, x, y, w, h);
-    // lightning glowing inside the cloud
-    if (cl.glow > 0.01) {
-      cctx.globalCompositeOperation = 'lighter';
-      const gx = x + w * 0.5, gy = y + h * 0.55;
-      const rg = cctx.createRadialGradient(gx, gy, 0, gx, gy, w * 0.45);
-      rg.addColorStop(0, lvl === 4 ? `rgba(255,150,190,${cl.glow * 0.7})` : `rgba(190,220,255,${cl.glow * 0.7})`);
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      cctx.globalAlpha = 1;
-      cctx.fillStyle = rg;
-      cctx.fillRect(gx - w * 0.5, gy - w * 0.5, w, w);
-      cctx.globalCompositeOperation = 'source-over';
-      cl.glow *= 0.9;
-    }
-  }
-  // tint the whole layer to the sky colour; a flash lets the clouds' own light through
+  cctx.globalAlpha = 1;
+  cctx.clearRect(0, 0, cw, chh);
+  const dw = sh.c.width * 2 * K, dh = H * sh.hk * K;
+  sh.x = (sh.x + (0.12 + wind * 1.1) * sh.v) % (dw / K);
+  const off = ((sh.x + scene.px * sh.par) * K) % dw;
+  const y = (sh.y * H - scene.py * sh.par * 0.5) * K;
+  const cover = [0.62, 0.78, 0.9, 0.97, 1][lvl];
+  cctx.globalAlpha = i === 2 ? cover * [0.35, 0.6, 0.85, 1, 1][lvl] : cover;
+  for (let x = -off; x < cw; x += dw) cctx.drawImage(sh.c, x, y, dw, dh);
+  // tint to the sky; storms darken the clouds
   cctx.globalAlpha = 1;
   cctx.globalCompositeOperation = 'source-atop';
-  const tint = back ? mix(sky[1], [0, 0, 0], 0.25) : mix(sky[0], [0, 0, 0], 0.35);
-  cctx.fillStyle = rgb(tint, Math.max(0.15, 0.78 - scene.flash * 0.6 - (lvl === 0 ? 0.15 : 0)));
-  cctx.fillRect(0, 0, W, H);
+  const tint = mix(i === 0 ? sky[1] : sky[0], [0, 0, 0], [0.1, 0.25, 0.45][i]);
+  cctx.fillStyle = rgb(tint, [0.45, 0.58, 0.7, 0.78, 0.8][lvl]);
+  cctx.fillRect(0, 0, cw, chh);
+  // lightning inside the clouds
+  if (scene.flash > 0.02 || scene.glows.length) {
+    cctx.globalCompositeOperation = 'source-atop';      // light only where there is cloud
+    for (const gl of scene.glows) {
+      const gx = gl.x * K, gy = gl.y * K, r = gl.r * K;
+      const rg = cctx.createRadialGradient(gx, gy, 0, gx, gy, r);
+      rg.addColorStop(0, lvl === 4 ? `rgba(255,140,180,${gl.life * 0.55})` : `rgba(190,215,255,${gl.life * 0.55})`);
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      cctx.fillStyle = rg;
+      cctx.fillRect(gx - r, gy - r, r * 2, r * 2);
+    }
+    if (scene.flash > 0.02) {
+      cctx.globalCompositeOperation = 'lighter';
+      cctx.globalAlpha = scene.flash * 0.35;
+      for (let x = -off; x < cw; x += dw) cctx.drawImage(sh.c, x, y, dw, dh);
+    }
+  }
   cctx.globalCompositeOperation = 'source-over';
+  cctx.globalAlpha = 1;
   bctx.drawImage(cloudLayer, 0, 0, W, H);
 }
 
@@ -1242,7 +1439,7 @@ function drawSkyDragon(lvl) {
 
 function drawRanges(lvl) {
   const base = sky[2];
-  const shades = [0.45, 0.68, 0.84];
+  const shades = [0.64, 0.8, 0.9];
   const lit = [0.55, 0.38, 0.22];
   ranges.forEach((r, i) => {
     const off = scene.px * (4 + i * 6);
@@ -1251,21 +1448,32 @@ function drawRanges(lvl) {
     const col = mix(mix(base, [4, 6, 10], shades[i]), [170, 190, 225], scene.flash * lit[i]);
     bctx.fillStyle = rgb(col);
     bctx.fill(r.p);
-    if (i === 0 || scene.flash > 0.05) {
-      // snow / rim light on the ridge
-      bctx.strokeStyle = i === 0 ? `rgba(200,215,240,${0.12 + scene.flash * 0.5})` : `rgba(210,225,255,${scene.flash * 0.4})`;
+    // rock texture: light on the faces turned to the sky, strata below
+    bctx.globalCompositeOperation = 'overlay';
+    bctx.globalAlpha = [0.42, 0.32, 0.22][i] + scene.flash * 0.3;
+    bctx.drawImage(r.tex, -80, 0, W + 160, H);
+    bctx.globalCompositeOperation = 'source-over';
+    bctx.globalAlpha = 1;
+    if (r.snow) {
+      bctx.globalAlpha = Math.max(0.12, 0.45 - lvl * 0.07) + scene.flash * 0.35;
+      bctx.filter = 'blur(1.5px)';                        // soft snow line (ignored where unsupported)
+      bctx.drawImage(r.snow, -80, 0, W + 160, H);
+      bctx.filter = 'none';
+      bctx.globalAlpha = 1;
+    }
+    if (scene.flash > 0.05) {
+      bctx.strokeStyle = `rgba(210,225,255,${scene.flash * 0.45})`;
       bctx.lineWidth = 1.2;
       bctx.stroke(r.ridge);
     }
-    // haze between ranges
-    const hz = bctx.createLinearGradient(0, H * 0.45, 0, GROUND);
-    hz.addColorStop(0, 'rgba(0,0,0,0)');
-    hz.addColorStop(1, rgb(sky[2], 0.12));
+    // atmospheric perspective: each range sinks into the haze
+    const hz = bctx.createLinearGradient(0, H * 0.4, 0, GROUND);
+    hz.addColorStop(0, rgb(sky[2], [0.22, 0.12, 0.05][i]));
+    hz.addColorStop(1, rgb(sky[2], [0.1, 0.06, 0.02][i]));
     bctx.fillStyle = hz;
     bctx.fill(r.p);
-    if (i === 1) drawRuins(lvl);
-    if (i === 1) drawTrees(treesMid, ranges[1], 0.7, lvl);
-    if (i === 0) drawTornado(lvl);
+    if (i === 0) { drawTornado(lvl); bctx.restore(); drawClouds(2, lvl); return; }
+    if (i === 1) { drawRuins(lvl); drawTrees(treesMid, ranges[1], 0.7, lvl); }
     bctx.restore();
   });
 }
@@ -1333,45 +1541,29 @@ function drawTornado(lvl) {
   bctx.fillRect(bx - 90, bottom - 70, 180, 90);
 }
 
-function drawTree(tr, baseY, scale, color) {
-  const sway = Math.sin(t * (1.1 + wind * 3) * tr.w + tr.p) * (0.02 + wind * 0.08) + wind * 0.12;
-  const h = tr.h * scale;
+function drawTree(tr, baseY, scale, alpha) {
+  const sway = Math.sin(t * (0.9 + wind * 2.4) * tr.w + tr.p) * (0.01 + wind * 0.045) + wind * 0.05;
+  const spr = tr.kind === 'dead' ? deadSprites[tr.sp] : pineSprites[tr.sp];
+  const h = tr.h * scale, w = h * spr.width / spr.height;
   bctx.save();
   bctx.translate(tr.x, baseY);
-  bctx.rotate(sway * 0.6);
-  bctx.fillStyle = color;
-  bctx.fillRect(-h * 0.03, -h * 0.4, h * 0.06, h * 0.42);
-  if (tr.kind === 'pine') {
-    for (let k = 0; k < 4; k++) {
-      const y0 = -h * (0.18 + k * 0.2);
-      const w0 = h * (0.3 - k * 0.06);
-      bctx.save();
-      bctx.rotate(sway * (k + 1) * 0.35);
-      bctx.beginPath();
-      bctx.moveTo(-w0, y0);
-      bctx.quadraticCurveTo(0, y0 - h * 0.05, w0, y0);
-      bctx.lineTo(0, y0 - h * 0.34);
-      bctx.closePath();
-      bctx.fill();
-      bctx.restore();
-    }
-  } else {
-    bctx.rotate(sway * 0.8);
-    for (const [dx, dy, r] of [[0, -0.62, 0.26], [-0.2, -0.5, 0.2], [0.2, -0.52, 0.21], [0.05, -0.8, 0.18], [-0.12, -0.72, 0.17]]) {
-      bctx.beginPath();
-      bctx.arc((dx + sway * 0.3) * h, dy * h, r * h, 0, Math.PI * 2);
-      bctx.fill();
-    }
-  }
+  bctx.rotate(sway);
+  bctx.globalAlpha = alpha;
+  bctx.drawImage(spr, -w / 2, -h, w, h);
   bctx.restore();
 }
 
 function drawTrees(list, range, scale, lvl) {
-  const col = rgb(mix(mix(sky[2], [3, 5, 8], 0.86), [150, 170, 210], scene.flash * 0.2));
-  for (const tr of list) drawTree(tr, ridgeY(range, tr.x) + 3, scale, col);
+  for (const tr of list) drawTree(tr, ridgeY(range, tr.x) + 4, scale, 0.82);
+  // haze in front of the distant forest
+  const hz = bctx.createLinearGradient(0, H * 0.55, 0, H * 0.8);
+  hz.addColorStop(0, rgb(sky[2], 0));
+  hz.addColorStop(0.6, rgb(sky[2], 0.16 + scene.flash * 0.2));
+  hz.addColorStop(1, rgb(sky[2], 0));
+  bctx.fillStyle = hz;
+  bctx.fillRect(-100, H * 0.55, W + 200, H * 0.25);
 }
 
-// A flock flying in a loose V. z is depth: far flocks are smaller, paler and slower.
 function makeFlock(x, i = rand(3)) {
   const z = [0.45, 0.7, 1][i % 3] * rnd(0.85, 1.1);
   const n = 3 + rand(6);
@@ -1454,13 +1646,10 @@ function drawFog(lvl) {
   for (const f of fog) {
     f.x += f.v + wind * 0.8;
     if (f.x - f.r > W) f.x = -f.r;
-    const g = bctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
-    const c = lvl === 4 ? [120, 40, 60] : mix(sky[2], [200, 210, 225], 0.3);
-    g.addColorStop(0, rgb(c, 0.1 + lvl * 0.02 + scene.flash * 0.1));
-    g.addColorStop(1, rgb(c, 0));
-    bctx.fillStyle = g;
-    bctx.fillRect(f.x - f.r, f.y - f.r * 0.4, f.r * 2, f.r * 0.8);
+    bctx.globalAlpha = (0.1 + lvl * 0.02 + scene.flash * 0.1) * f.a;
+    bctx.drawImage(fogSprite, f.x - f.r, f.y - f.r * 0.35, f.r * 2, f.r * 0.7);
   }
+  bctx.globalAlpha = 1;
 }
 
 function drawGround(lvl) {
@@ -1513,7 +1702,7 @@ function drawForeground(lvl) {
   bctx.save();
   bctx.translate(-off, 0);
   const col = rgb(mix(sky[2], [1, 2, 4], 0.94));
-  for (const tr of treesFront) drawTree(tr, GROUND + 8, 1, col);
+  for (const tr of treesFront) drawTree(tr, GROUND + 10, 1, 1);
   // grass blades bending in the wind
   bctx.strokeStyle = col;
   bctx.lineWidth = 1.3;
@@ -1572,16 +1761,12 @@ function drawAirborne(lvl) {
 
 function ambientLightning(lvl) {
   if (fx.hush || REDUCED) return;
-  // sheet lightning inside the clouds
+  // sheet lightning glowing inside the clouds
   const sheet = [0.001, 0.004, 0.012, 0.02, 0.035][lvl];
   if (Math.random() < sheet) {
-    const cl = clouds[rand(clouds.length)];
-    cl.glow = 1;
-    scene.flash = Math.max(scene.flash, 0.25);
-    if (Math.random() < 0.5) {
-      const near = clouds.filter((c) => Math.abs(c.x - cl.x) < 400);
-      near.forEach((c) => (c.glow = Math.max(c.glow, 0.6)));
-    }
+    scene.glows.push({ x: rnd(0, W), y: rnd(0.06, 0.3) * H, r: rnd(160, 320), life: 1 });
+    if (Math.random() < 0.4) scene.glows.push({ x: rnd(0, W), y: rnd(0.06, 0.3) * H, r: rnd(120, 240), life: 0.7 });
+    scene.flash = Math.max(scene.flash, 0.22);
     audio.thunder(0.2, 0.6 + Math.random());
   }
   // real strikes hitting the mountains
@@ -1589,39 +1774,51 @@ function ambientLightning(lvl) {
   if (Math.random() < strikeChance) {
     const x = rnd(0.05, 0.95) * W;
     const range = ranges[rand(2)];
-    const b = makeBolt(x + rnd(-80, 80), H * rnd(0.12, 0.25), x, ridgeY(range, x), 0.9);
-    scene.bolts.push(b);
+    scene.bolts.push(makeBolt(x + rnd(-80, 80), H * rnd(0.12, 0.25), x, ridgeY(range, x), 0.9));
     scene.flash = Math.max(scene.flash, 0.9);
-    clouds.forEach((c) => { if (Math.abs(c.x + 200 - x) < 350) c.glow = 1; });
+    scene.glows.push({ x, y: H * 0.15, r: 380, life: 1 });
     audio.thunder(0.5, 0.25 + Math.random() * 0.6);
   }
+  for (const gl of scene.glows) gl.life *= 0.88;
+  scene.glows = scene.glows.filter((gl) => gl.life > 0.03);
 }
 
-// Rain falls in the scenery, behind the grid and the panels.
+const RAIN_LAYERS = [
+  { share: 0.5, v: 7, len: 9, w: 0.6, a: 0.16 },
+  { share: 0.32, v: 11, len: 15, w: 0.9, a: 0.26 },
+  { share: 0.18, v: 16, len: 26, w: 1.4, a: 0.4 },
+];
 function drawRain(lvl) {
   const target = fx.hush ? 0 : RAIN[lvl] + (fx.downpour > 0 ? 700 : 0);
   if (fx.downpour > 0) fx.downpour -= 1 / 60;
-  while (drops.length < target) drops.push({ x: Math.random() * W * 1.4 - W * 0.2, y: Math.random() * -H, len: 10 + Math.random() * 18, v: 9 + Math.random() * 9 });
-  if (drops.length > target) drops.length = Math.max(target, drops.length - 12);
-  bctx.strokeStyle = lvl === 4 ? 'rgba(255,190,210,0.35)' : 'rgba(175,200,235,0.35)';
-  bctx.lineWidth = 1;
-  bctx.beginPath();
-  for (const d of drops) {
-    const dx = wind * d.len * 0.9;
-    bctx.moveTo(d.x, d.y);
-    bctx.lineTo(d.x + dx, d.y + d.len);
-    d.y += d.v;
-    d.x += wind * d.v * 0.9;
-    if (d.y > H || d.x > W + 50) { d.y = -20 - Math.random() * 100; d.x = Math.random() * W * 1.4 - W * 0.4; }
+  while (drops.length < target) {
+    const r = Math.random();
+    const z = r < RAIN_LAYERS[0].share ? 0 : r < RAIN_LAYERS[0].share + RAIN_LAYERS[1].share ? 1 : 2;
+    const L = RAIN_LAYERS[z];
+    drops.push({ x: Math.random() * W * 1.4 - W * 0.2, y: Math.random() * -H, z, len: L.len * rnd(0.7, 1.3), v: L.v * rnd(0.85, 1.15) });
   }
-  bctx.stroke();
+  if (drops.length > target) drops.length = Math.max(target, drops.length - 12);
+  const tint = lvl === 4 ? '255,190,210' : '185,205,235';
+  for (let z = 0; z < 3; z++) {
+    const L = RAIN_LAYERS[z];
+    bctx.strokeStyle = `rgba(${tint},${L.a + scene.flash * 0.3})`;
+    bctx.lineWidth = L.w;
+    bctx.beginPath();
+    for (const d of drops) {
+      if (d.z !== z) continue;
+      const dx = wind * d.len * 0.9;
+      bctx.moveTo(d.x, d.y);
+      bctx.lineTo(d.x + dx, d.y + d.len);
+      d.y += d.v;
+      d.x += wind * d.v * 0.9;
+      if (d.y > H || d.x > W + 50) { d.y = -20 - Math.random() * 100; d.x = Math.random() * W * 1.4 - W * 0.4; }
+    }
+    bctx.stroke();
+  }
 }
 
 function drawVignette(lvl) {
-  const g = bctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.3, W / 2, H * 0.5, Math.max(W, H) * 0.8);
-  g.addColorStop(0, 'rgba(0,0,0,0)');
-  g.addColorStop(1, lvl === 4 ? 'rgba(40,0,10,0.65)' : `rgba(0,0,0,${0.35 + lvl * 0.07})`);
-  bctx.fillStyle = g;
+  bctx.fillStyle = vignettes[lvl];
   bctx.fillRect(0, 0, W, H);
 }
 
@@ -1637,11 +1834,11 @@ function drawBackground() {
 
   ambientLightning(lvl);
   drawSky(lvl);
-  drawCloudLayer(true, lvl);
+  drawClouds(0, lvl);
   drawSkyDragon(lvl);
   for (const b of scene.bolts) drawBolt(bctx, b, lvl);
   scene.bolts = scene.bolts.filter((b) => b.life > 0);
-  drawCloudLayer(false, lvl);
+  drawClouds(1, lvl);
   drawBirds(lvl);
   drawRanges(lvl);
   drawFog(lvl);
@@ -1784,11 +1981,15 @@ function drawFx() {
   }
 }
 
-function frame() {
-  t += 1 / 60;
+let lastFrame = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (now - lastFrame < 15.5) return;                    // 120/144 Hz screens: keep the 60 fps pace
+  const dt = Math.min(0.05, (now - lastFrame) / 1000 || 1 / 60);
+  lastFrame = now;
+  t += dt;
   drawBackground();
   drawFx();
-  requestAnimationFrame(frame);
 }
 
 /* ------------------------- audio ------------------------- */
