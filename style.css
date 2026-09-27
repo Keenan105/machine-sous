@@ -489,3 +489,65 @@ body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0
   .cell.land .sym:not(.old) { animation-duration: 1ms; animation-delay: 0ms; }
   .cell.leaving .sym.old { animation-duration: 1ms; }
 }
+
+/* symbol artwork */
+.cell .sym .art { display: block; width: 1.6em; height: 1.6em; overflow: visible; }
+.pay .e .art { width: 34px; height: 34px; display: block; }
+
+/* level transitions */
+#transition {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s;
+}
+#transition.dark { opacity: 1; background: rgba(2, 4, 14, 0.6); }
+#transition.green { opacity: 1; background: radial-gradient(circle at 50% 50%, rgba(120, 255, 190, 0.18), rgba(10, 40, 30, 0.5) 70%); animation: greenPulse 1s ease-in-out; }
+#transition.black { opacity: 1; background: #000; transition-duration: 0.12s; }
+#transition.red { opacity: 1; background: radial-gradient(circle at 50% 50%, rgba(255, 60, 100, 0.35), rgba(60, 0, 20, 0.6) 75%); animation: redFade 1.2s ease-out forwards; }
+@keyframes greenPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.8); } }
+@keyframes redFade { from { opacity: 1; } to { opacity: 0; } }
+
+.step.levelup { animation: stepUp 1s cubic-bezier(.2, 1.4, .4, 1); }
+.step.levelup span { animation: stepGlow 1s ease-out; }
+@keyframes stepUp { 0% { transform: scale(1); } 35% { transform: scale(1.7); } 100% { transform: scale(1.15); } }
+@keyframes stepGlow { 0% { filter: drop-shadow(0 0 0 #fff); } 35% { filter: drop-shadow(0 0 14px #fff) brightness(1.6); } 100% { filter: none; } }
+
+#board.charged .cell {
+  border-color: #9fe3ff;
+  box-shadow: 0 0 12px rgba(127, 211, 255, 0.7), inset 0 0 10px rgba(127, 211, 255, 0.35);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+body.sway #app { animation: sway 0.9s ease-in-out; }
+@keyframes sway {
+  20% { transform: translateX(10px) skewX(-2deg); }
+  45% { transform: translateX(-6px) skewX(1.2deg); }
+  70% { transform: translateX(3px) skewX(-0.5deg); }
+}
+body.rumble #app { animation: rumble 1s linear; }
+@keyframes rumble {
+  10%, 30%, 50%, 70%, 90% { transform: translate(-2px, 2px); }
+  20%, 40%, 60%, 80% { transform: translate(2px, -2px); }
+}
+
+#banner.lvl-1.show { animation: gustIn 1.4s cubic-bezier(.2, .9, .3, 1); color: #e6f4ff; }
+@keyframes gustIn {
+  0% { transform: translate(-160%, -50%) skewX(-25deg); filter: blur(6px); opacity: 0; }
+  45% { transform: translate(-50%, -50%) skewX(6deg); filter: blur(0); opacity: 1; }
+  60% { transform: translate(-50%, -50%) skewX(0); }
+}
+#banner.lvl-2.show { animation: zap 1.4s steps(1); border-color: #9fe3ff; color: #eaf6ff; text-shadow: 0 0 12px #7fd3ff, 0 0 2px #fff; }
+@keyframes zap {
+  0% { opacity: 0; } 8% { opacity: 1; } 14% { opacity: 0.2; } 20% { opacity: 1; } 28% { opacity: 0.4; } 34% { opacity: 1; }
+}
+#banner.lvl-3.show { border-color: #9dffcf; color: #eafff4; box-shadow: 0 0 34px rgba(120, 255, 190, 0.5); animation: spinIn 1.5s cubic-bezier(.2, 1.2, .3, 1); }
+@keyframes spinIn { 0% { transform: translate(-50%, -50%) rotate(-200deg) scale(0.2); opacity: 0; } 55% { transform: translate(-50%, -50%) rotate(8deg) scale(1.08); opacity: 1; } 75% { transform: translate(-50%, -50%) rotate(0) scale(1); } }
+#banner.lvl-4.show { border-color: #ff6f93; color: #fff0f4; background: rgba(40, 0, 12, 0.85); box-shadow: 0 0 50px rgba(255, 60, 110, 0.6); text-shadow: 0 0 14px #ff4d7d; animation: slam 1.8s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes slam { 0% { transform: translate(-50%, -50%) scale(3); opacity: 0; filter: blur(8px); } 30% { transform: translate(-50%, -50%) scale(0.92); opacity: 1; filter: blur(0); } 45% { transform: translate(-50%, -50%) scale(1.04); } 60% { transform: translate(-50%, -50%) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #banner.show, .step.levelup, .step.levelup span { animation: none; }
+}

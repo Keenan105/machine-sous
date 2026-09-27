@@ -65,7 +65,7 @@ const cellEl = (c, r) => cellEls[r * COLS + c];
 function paintCell(c, r, anim, delay = 0) {
   const el = cellEl(c, r);
   const cell = grid[c][r];
-  el.querySelector('.sym').textContent = SYMBOLS[cell.s].e;
+  el.querySelector('.sym').innerHTML = symbolSVG(cell.s);
   let cls = 'cell s-' + cell.s;
   if (isSticky(cell)) cls += ' sticky';
   if (state.stormZones[zoneOf(c)]) cls += ' stormz';
@@ -141,9 +141,11 @@ function setFreeSpins(text) {
 }
 
 let bannerTimer = 0;
-async function banner(text, ms = 1300) {
+async function banner(text, ms = 1300, cls = '') {
   const b = $('#banner');
   b.textContent = text;
+  b.className = cls;
+  void b.offsetWidth;
   b.classList.add('show');
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => b.classList.remove('show'), ms);
@@ -177,12 +179,86 @@ function showLevel(level, intensity, announce) {
   state.level = level;
   document.body.dataset.level = level;
   if (level !== prev) audio.setLevel(level);
-  if (announce && level > prev) {
-    const L = LEVELS[level];
-    banner(`${L.icon} ${L.name.toUpperCase()} ×${L.mult}`);
-    if (level >= 2) { fx.flash = 0.6; audio.thunder(0.8); }
-  }
   updateWeatherUI();
+  return announce && level > prev;
+}
+
+/* ------------------------- level transitions ------------------------- */
+
+function bodyFx(cls, ms) {
+  if (REDUCED) return;
+  document.body.classList.remove(cls);
+  void document.body.offsetWidth;
+  document.body.classList.add(cls);
+  setTimeout(() => document.body.classList.remove(cls), ms);
+}
+
+// Each weather level gets its own entrance.
+async function levelTransition(level) {
+  const L = LEVELS[level];
+  const title = `${L.icon} ${L.name.toUpperCase()} ×${L.mult}`;
+  const ov = $('#transition');
+  const hud = document.querySelector(`.step[data-l="${level}"]`);
+  hud.classList.remove('levelup');
+  void hud.offsetWidth;
+  hud.classList.add('levelup');
+  scene.rush = 1;
+  const c = centerOf(board);
+
+  if (level === 1) {
+    // Wind: a gust sweeps across the screen and tears leaves away.
+    audio.gust();
+    fx.gust();
+    for (let i = 0; i < 40; i++) leaves.push({ x: rnd(-300, -10), y: rnd(0, H), s: rnd(2, 5), a: rnd(0, 6), va: rnd(-0.3, 0.3), vy: rnd(-1, 1), p: rnd(0, 6), c: rand(3), boost: rnd(8, 16) });
+    bodyFx('sway', 900);
+    banner(title, 1400, 'lvl-1');
+    await sleep(950);
+  } else if (level === 2) {
+    // Thunderstorm: the sky darkens, three bolts hit the horizon, the grid gets charged.
+    ov.className = 'dark';
+    await sleep(220);
+    board.classList.add('charged');
+    for (let i = 0; i < 3; i++) {
+      const x = W * (0.18 + 0.32 * i) + rnd(-50, 50);
+      scene.bolts.push(makeBolt(x + rnd(-60, 60), H * 0.1, x, GROUND - rnd(30, 140), 1.3));
+      scene.flash = 1;
+      fx.flash = 0.8;
+      audio.thunder(0.9);
+      await sleep(160);
+    }
+    ov.className = '';
+    banner(title, 1400, 'lvl-2');
+    setTimeout(() => board.classList.remove('charged'), 800);
+    await sleep(750);
+  } else if (level === 3) {
+    // Supercell: green light, a vortex bursts out of the grid, the ground rumbles.
+    ov.className = 'green';
+    audio.rumble();
+    fx.vortex(c.x, c.y);
+    fx.ring(c.x, c.y, '170,255,210');
+    bodyFx('rumble', 1000);
+    banner(title, 1500, 'lvl-3');
+    await sleep(1050);
+    ov.className = '';
+  } else if (level === 4) {
+    // STORMBOUND: blackout and silence, then a red strike and a shockwave.
+    ov.className = 'black';
+    audio.silence(0.03);
+    await sleep(420);
+    ov.className = 'red';
+    fx.bolt(c.x, -40, c.x, c.y, 2.4);
+    fx.bolt(c.x + 80, -40, c.x + 10, c.y, 1.2);
+    fx.flash = 1.4;
+    audio.restore();
+    audio.boom();
+    fx.ring(c.x, c.y, '255,90,130');
+    setTimeout(() => fx.ring(c.x, c.y, '255,210,220'), 160);
+    for (let i = 0; i < 70; i++) embers.push({ x: c.x + rnd(-80, 80), y: c.y + rnd(-50, 50), v: rnd(1.5, 4.5), s: rnd(1, 3), p: rnd(0, 6) });
+    bodyFx('shake', 700);
+    banner(title, 1800, 'lvl-4');
+    await sleep(1150);
+    ov.className = '';
+  }
 }
 
 /* ------------------------- column-by-column drop ------------------------- */
@@ -211,7 +287,7 @@ function animateColumn(c, items, fallMs, lag = ROW_LAG) {
     el.style.setProperty('--dur', total + 'ms');
     el.style.setProperty('--fall', fallMs + 'ms');
     if (it.old) {
-      el.querySelector('.sym.old').textContent = SYMBOLS[it.old].e;
+      el.querySelector('.sym.old').innerHTML = symbolSVG(it.old);
       el.style.setProperty('--to', it.to * P + 'px');
     }
     void el.offsetWidth;
@@ -363,7 +439,7 @@ async function play(step) {
     }
 
     case 'intensity':
-      showLevel(step.level, step.intensity, true);
+      if (showLevel(step.level, step.intensity, true)) await levelTransition(step.level);
       break;
 
     case 'event':
@@ -394,7 +470,7 @@ async function play(step) {
         audio.silence(0.35);
         board.classList.add('slow');
         for (const [c, r] of step.cells) {
-          cellEl(c, r).querySelector('.sym').textContent = SYMBOLS.mystery.e;
+          cellEl(c, r).querySelector('.sym').innerHTML = symbolSVG('mystery');
           flashCells([[c, r]], 'hidden');
         }
         await sleep(1400);
@@ -593,6 +669,18 @@ const fx = {
   hush: false,
   downpour: 0,
   sparks: [],
+  streaks: [],
+  rings: [],
+  swirl: [],
+  gust() {
+    for (let i = 0; i < 46; i++) {
+      this.streaks.push({ x: rnd(-W * 0.8, -20), y: rnd(0.04, 0.96) * H, len: rnd(90, 280), v: rnd(24, 42), life: 1, amp: rnd(4, 14), ph: rnd(0, 6) });
+    }
+  },
+  ring(x, y, rgbStr) { this.rings.push({ x, y, r: 12, v: 16, life: 1, c: rgbStr }); },
+  vortex(x, y) {
+    for (let i = 0; i < 90; i++) this.swirl.push({ cx: x, cy: y, a: rnd(0, Math.PI * 2), r: rnd(10, 60), vr: rnd(2.5, 6), va: rnd(0.08, 0.16), life: 1, s: rnd(1.5, 4) });
+  },
   bolt(x1, y1, x2, y2, power = 1) { this.bolts.push(makeBolt(x1, y1, x2, y2, power)); },
   burst(x, y, color) {
     for (let i = 0; i < 12; i++) {
@@ -610,6 +698,7 @@ const scene = {
   moon: 0.9,
   dragonA: 0,
   dragonX: -400,
+  rush: 0,         // speeds up sky changes during a level transition
   px: 0, py: 0,    // parallax offset (pointer)
   tpx: 0, tpy: 0,
 };
@@ -1157,13 +1246,17 @@ function drawAirborne(lvl) {
   // leaves torn off by the wind
   const wantLeaves = REDUCED ? 0 : [0, 18, 34, 50, 70][lvl];
   while (leaves.length < wantLeaves) leaves.push({ x: rnd(-200, W), y: rnd(0, H), s: rnd(2, 5), a: rnd(0, 6), va: rnd(-0.2, 0.2), vy: rnd(-0.5, 0.8), p: rnd(0, 6), c: rand(3) });
-  if (leaves.length > wantLeaves) leaves.length = wantLeaves;
+
   const leafCols = ['rgba(60,80,40,0.85)', 'rgba(100,80,40,0.85)', 'rgba(40,60,50,0.85)'];
   for (const l of leaves) {
-    l.x += 1 + wind * 7 * (l.s / 4);
+    l.x += 1 + wind * 7 * (l.s / 4) + (l.boost || 0);
+    if (l.boost) l.boost *= 0.985;
     l.y += l.vy + Math.sin(t * 3 + l.p) * 1.2;
     l.a += l.va + wind * 0.05;
-    if (l.x > W + 20 || l.y > H + 20 || l.y < -20) { l.x = rnd(-120, -10); l.y = rnd(0, H * 0.9); }
+    if (l.x > W + 20 || l.y > H + 20 || l.y < -20) {
+      if (leaves.length > wantLeaves) { l.dead = true; continue; }
+      l.x = rnd(-120, -10); l.y = rnd(0, H * 0.9); l.boost = 0;
+    }
     bctx.save();
     bctx.translate(l.x, l.y);
     bctx.rotate(l.a);
@@ -1174,6 +1267,7 @@ function drawAirborne(lvl) {
     bctx.fill();
     bctx.restore();
   }
+  if (leaves.some((l) => l.dead)) leaves = leaves.filter((l) => !l.dead);
   // embers rising at STORMBOUND
   const wantEmbers = lvl === 4 && !REDUCED ? 70 : 0;
   while (embers.length < wantEmbers) embers.push({ x: rnd(0, W), y: rnd(H * 0.5, H), v: rnd(0.4, 1.4), s: rnd(1, 2.6), p: rnd(0, 6) });
@@ -1227,7 +1321,9 @@ function drawVignette(lvl) {
 
 function drawBackground() {
   const lvl = state.level;
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) sky[i][j] = lerp(sky[i][j], SKY[lvl][i][j], 0.02);
+  const skyK = 0.02 + scene.rush * 0.1;
+  scene.rush *= 0.97;
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) sky[i][j] = lerp(sky[i][j], SKY[lvl][i][j], skyK);
   wind = lerp(wind, WIND[lvl], 0.01);
   const drift = REDUCED ? 0 : 1;
   scene.px = lerp(scene.px, (scene.tpx + Math.sin(t * 0.13) * 0.4) * drift, 0.03);
@@ -1312,6 +1408,43 @@ function drawFx() {
   for (const b of fx.bolts) drawBolt(fctx, b, lvl);
   fx.bolts = fx.bolts.filter((b) => b.life > 0);
   if (fx.flash > 0.3) scene.flash = Math.max(scene.flash, fx.flash * 0.8);
+
+  // level transitions: gust streaks, shockwave rings, vortex debris
+  fctx.lineCap = 'round';
+  for (const st of fx.streaks) {
+    st.x += st.v;
+    st.life -= 0.016;
+    const a = Math.max(0, st.life) * 0.55;
+    fctx.strokeStyle = `rgba(225,240,255,${a})`;
+    fctx.lineWidth = 1.5;
+    fctx.beginPath();
+    for (let k = 0; k <= 8; k++) {
+      const px = st.x - st.len + (st.len * k) / 8;
+      const py = st.y + Math.sin(k * 0.8 + st.ph + t * 6) * st.amp * (k / 8);
+      k ? fctx.lineTo(px, py) : fctx.moveTo(px, py);
+    }
+    fctx.stroke();
+  }
+  fx.streaks = fx.streaks.filter((st) => st.life > 0 && st.x - st.len < W + 50);
+  for (const rg of fx.rings) {
+    rg.r += rg.v;
+    rg.v *= 0.97;
+    rg.life -= 0.022;
+    fctx.strokeStyle = `rgba(${rg.c},${Math.max(0, rg.life)})`;
+    fctx.lineWidth = 2 + rg.life * 8;
+    fctx.beginPath();
+    fctx.arc(rg.x, rg.y, rg.r, 0, Math.PI * 2);
+    fctx.stroke();
+  }
+  fx.rings = fx.rings.filter((rg) => rg.life > 0);
+  for (const d of fx.swirl) {
+    d.a += d.va;
+    d.r += d.vr;
+    d.life -= 0.012;
+    fctx.fillStyle = `rgba(200,255,225,${Math.max(0, d.life) * 0.8})`;
+    fctx.fillRect(d.cx + Math.cos(d.a) * d.r, d.cy + Math.sin(d.a) * d.r * 0.75, d.s * 2, d.s);
+  }
+  fx.swirl = fx.swirl.filter((d) => d.life > 0);
 
   // sparks from bursting symbols
   for (const sp of fx.sparks) {
@@ -1458,6 +1591,11 @@ const audio = {
     const base = Math.min(step - 1, 5);
     [0, 2].forEach((o, i) => this.tone(scale[base + o], 0.12, 0.6, i * 0.07, 'triangle'));
   },
+  rumble() {
+    if (!this.ctx) return;
+    this.tone(42, 0.6, 2, 0, 'sine', 30);
+    this.burst(this.brown, 'lowpass', 220, 1, 0.3, 2.2, 0, 60);
+  },
   pop(n = 1) {
     if (!this.ctx) return;
     this.burst(this.noise, 'bandpass', 1800, Math.min(0.35, 0.1 + n * 0.02), 0.004, 0.18, 0, 500);
@@ -1495,11 +1633,11 @@ function buildPaytable() {
   const x = (v) => fmt(v * CONFIG.payScale);
   const rows = StormEngine.PAYING.slice().reverse().map((k) => {
     const s = SYMBOLS[k];
-    return `<div class="pay"><span class="e">${s.e}</span><div><b>${s.name}</b><small>8-9 : ×${x(s.pay[0])} · 10-11 : ×${x(s.pay[1])}<br>12+ : ×${x(s.pay[2])}</small></div></div>`;
+    return `<div class="pay"><span class="e">${symbolSVG(k)}</span><div><b>${s.name}</b><small>8-9 : ×${x(s.pay[0])} · 10-11 : ×${x(s.pay[1])}<br>12+ : ×${x(s.pay[2])}</small></div></div>`;
   });
-  rows.push(`<div class="pay"><span class="e">🌀</span><div><b>Storm Wild</b><small>Remplace tout symbole payant</small></div></div>`);
-  rows.push(`<div class="pay"><span class="e">⚡</span><div><b>Charge</b><small>2 ⚡ et 3 ⚡ : événement<br>4 ⚡ : Eye of the Storm</small></div></div>`);
-  rows.push(`<div class="pay"><span class="e">🐉</span><div><b>Gardien</b><small>Devient Wild et frappe la grille</small></div></div>`);
+  rows.push(`<div class="pay"><span class="e">${symbolSVG('wild')}</span><div><b>Storm Wild</b><small>Remplace tout symbole payant</small></div></div>`);
+  rows.push(`<div class="pay"><span class="e">${symbolSVG('charge')}</span><div><b>Charge</b><small>2 ⚡ et 3 ⚡ : événement<br>4 ⚡ : Eye of the Storm</small></div></div>`);
+  rows.push(`<div class="pay"><span class="e">${symbolSVG('dragon')}</span><div><b>Gardien</b><small>Devient Wild et frappe la grille</small></div></div>`);
   $('#paytable').innerHTML = rows.join('');
   $('#mathInfo').textContent = `RTP théorique ≈ 96 % (simulation) · gain max ×${CONFIG.maxWinX} la mise · valeurs de la table en multiples de la mise.`;
 }
@@ -1525,6 +1663,11 @@ requestAnimationFrame(frame);
 window.stormbound = {
   state,
   spin,
+  // stormbound.transition(4) rejoue l'entrée d'un niveau (1 à 4).
+  transition(l) {
+    showLevel(l, LEVELS[l].need, false);
+    return levelTransition(l);
+  },
   bonus() {
     let r;
     do r = StormEngine.spin(bet(), rng); while (!r.bonus);

@@ -1,0 +1,136 @@
+/* =========================================================
+   STORMBOUND — illustrations vectorielles des symboles.
+   Un seul sprite SVG est injecté dans la page ; chaque case
+   l'affiche avec <use>. Pour passer à des images (PNG),
+   il suffit de changer symbolSVG().
+   ========================================================= */
+(function () {
+  'use strict';
+
+  const DEFS = `
+  <defs>
+    <linearGradient id="gLeaf" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1f6b22"/><stop offset=".55" stop-color="#5fc23c"/><stop offset="1" stop-color="#d4ff8a"/></linearGradient>
+    <radialGradient id="gDrop" cx=".38" cy=".62" r=".75"><stop offset="0" stop-color="#e9f8ff"/><stop offset=".35" stop-color="#58b6ff"/><stop offset="1" stop-color="#0a3f98"/></radialGradient>
+    <linearGradient id="gRock" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9c2b4"/><stop offset=".5" stop-color="#8a8274"/><stop offset="1" stop-color="#4a443b"/></linearGradient>
+    <linearGradient id="gIce" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#9ce9ff"/><stop offset="1" stop-color="#1f7fc4"/></linearGradient>
+    <linearGradient id="gSilver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#b3c0d8"/><stop offset="1" stop-color="#56627f"/></linearGradient>
+    <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".45" stop-color="#f6c744"/><stop offset="1" stop-color="#9a5a12"/></linearGradient>
+    <linearGradient id="gGoldRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0a8"/><stop offset=".5" stop-color="#c98a1c"/><stop offset="1" stop-color="#6e3f0a"/></linearGradient>
+    <linearGradient id="gSilverRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#8b9ab8"/><stop offset="1" stop-color="#3a4560"/></linearGradient>
+    <radialGradient id="gMedal" cx=".5" cy=".4" r=".65"><stop offset="0" stop-color="#34508c"/><stop offset="1" stop-color="#0a1330"/></radialGradient>
+    <radialGradient id="gMedalRed" cx=".5" cy=".4" r=".65"><stop offset="0" stop-color="#7a1e44"/><stop offset="1" stop-color="#1a0510"/></radialGradient>
+    <linearGradient id="gDragon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb0bf"/><stop offset=".45" stop-color="#e0385c"/><stop offset="1" stop-color="#5c0a22"/></linearGradient>
+    <linearGradient id="gBolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffde6"/><stop offset=".45" stop-color="#ffd83d"/><stop offset="1" stop-color="#ff8a14"/></linearGradient>
+    <radialGradient id="gBoltHalo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe98a" stop-opacity=".75"/><stop offset="1" stop-color="#ffb000" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gWild" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#9fe3ff"/><stop offset=".75" stop-color="#2a6cf0"/><stop offset="1" stop-color="#0b1f6b"/></radialGradient>
+    <radialGradient id="gMystery" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#4b3f7a"/><stop offset="1" stop-color="#140f2a"/></radialGradient>
+    <filter id="fGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="fShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000" flood-opacity=".55"/></filter>
+  </defs>`;
+
+  const ART = {
+    leaf: `
+      <g filter="url(#fShadow)">
+        <path d="M18 84 C 16 44 46 14 88 12 C 90 52 62 84 18 84 Z" fill="url(#gLeaf)" stroke="#164f18" stroke-width="2.5"/>
+        <path d="M22 80 Q 52 52 84 16" stroke="#eaffd0" stroke-width="2.6" fill="none" opacity=".85"/>
+        <path d="M38 64 L 34 46 M48 54 L 64 56 M56 44 L 54 30 M66 34 L 78 38 M44 58 L 30 56" stroke="#eaffd0" stroke-width="1.8" fill="none" opacity=".6"/>
+        <path d="M28 72 C 30 50 48 30 72 22" stroke="#fff" stroke-width="3" fill="none" opacity=".35" stroke-linecap="round"/>
+      </g>
+      <path d="M6 58 q 9 -9 19 -2 M10 70 q 7 -6 14 -1" stroke="#dfffe8" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".8"/>`,
+    drop: `
+      <g filter="url(#fShadow)">
+        <path d="M50 6 C 50 6 18 44 18 64 A 32 32 0 0 0 82 64 C 82 44 50 6 50 6 Z" fill="url(#gDrop)" stroke="#08367e" stroke-width="2.5"/>
+        <ellipse cx="37" cy="58" rx="6.5" ry="13" fill="#fff" opacity=".6" transform="rotate(22 37 58)"/>
+        <circle cx="62" cy="76" r="3" fill="#fff" opacity=".45"/>
+      </g>
+      <path d="M54 40 L 46 58 L 55 58 L 47 78" stroke="#f2fbff" stroke-width="3" fill="none" stroke-linejoin="round" filter="url(#fGlow)"/>`,
+    rock: `
+      <g filter="url(#fShadow)">
+        <path d="M22 86 L 14 50 L 30 18 L 62 10 L 86 32 L 88 70 L 64 90 Z" fill="url(#gRock)" stroke="#312b24" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M30 18 L 42 46 L 14 50 M42 46 L 62 10 M42 46 L 60 60 L 86 32 M60 60 L 64 90 M60 60 L 22 86" stroke="#2c261f" stroke-width="1.5" fill="none" opacity=".4"/>
+        <path d="M32 22 L 58 14" stroke="#fff" stroke-width="2.5" opacity=".35" stroke-linecap="round"/>
+      </g>
+      <path d="M50 30 L 50 72 M50 40 L 63 31 M50 52 L 37 43 M50 60 L 63 68" stroke="#7fe8ff" stroke-width="4.5" stroke-linecap="round" fill="none" filter="url(#fGlow)"/>`,
+    ice: `
+      <g filter="url(#fShadow)">
+        <path d="M50 4 L 80 21 L 80 71 L 50 96 L 20 71 L 20 21 Z" fill="url(#gIce)" stroke="#1f6aa8" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M50 4 L 50 96 M20 21 L 80 71 M80 21 L 20 71" stroke="#fff" stroke-width="1.5" opacity=".4"/>
+        <path d="M50 26 L 65 35 L 65 58 L 50 70 L 35 58 L 35 35 Z" fill="#fff" opacity=".3"/>
+        <path d="M24 26 L 48 12" stroke="#fff" stroke-width="3" opacity=".6" stroke-linecap="round"/>
+      </g>
+      <path d="M78 8 L 80 14 L 86 16 L 80 18 L 78 24 L 76 18 L 70 16 L 76 14 Z" fill="#fff" filter="url(#fGlow)"/>`,
+    wolf: `
+      <g filter="url(#fShadow)">
+        <circle cx="50" cy="50" r="45" fill="url(#gMedal)" stroke="url(#gSilverRim)" stroke-width="5"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#9fb4e0" stroke-width="1" opacity=".35"/>
+        <path d="M50 86 L 35 72 L 27 54 L 22 22 L 38 36 L 50 32 L 62 36 L 78 22 L 73 54 L 65 72 Z" fill="url(#gSilver)" stroke="#161d33" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M26 28 L 36 39 L 30 45 Z M74 28 L 64 39 L 70 45 Z" fill="#4a5674"/>
+        <path d="M50 36 L 45 48 L 50 60 L 55 48 Z" fill="#fff" opacity=".6"/>
+        <path d="M34 62 L 42 70 M66 62 L 58 70 M30 54 L 38 60 M70 54 L 62 60" stroke="#56627f" stroke-width="2" stroke-linecap="round"/>
+        <path d="M43 68 L 50 80 L 57 68 Z" fill="#161d33"/>
+      </g>
+      <path d="M36 51 L 46 55 L 39 58 Z M64 51 L 54 55 L 61 58 Z" fill="#8ff0ff" filter="url(#fGlow)"/>`,
+    eagle: `
+      <g filter="url(#fShadow)">
+        <circle cx="50" cy="50" r="45" fill="url(#gMedal)" stroke="url(#gGoldRim)" stroke-width="5"/>
+        <path d="M18 82 C 20 52 32 30 55 25 C 70 22 82 28 86 40 L 74 43 C 80 50 77 58 70 60 L 65 52 C 58 58 50 68 46 86 Z" fill="url(#gGold)" stroke="#5e340c" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M74 43 L 92 47 C 90 56 81 59 71 56 Z" fill="#ffe894" stroke="#5e340c" stroke-width="2"/>
+        <path d="M84 48 L 91 48" stroke="#5e340c" stroke-width="1.5"/>
+        <path d="M54 31 L 72 33" stroke="#5e340c" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M32 62 Q 42 58 46 48 M28 72 Q 40 68 44 58 M38 80 Q 48 72 50 62" stroke="#8a5514" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M30 48 C 34 38 42 32 52 30" stroke="#fff" stroke-width="2.5" opacity=".5" fill="none" stroke-linecap="round"/>
+      </g>
+      <circle cx="64" cy="38" r="3.6" fill="#8ff0ff" filter="url(#fGlow)"/>`,
+    trident: `
+      <g filter="url(#fShadow)">
+        <rect x="46" y="38" width="8" height="58" rx="3" fill="url(#gGold)" stroke="#5e340c" stroke-width="2"/>
+        <path d="M46 70 L 54 66 M46 80 L 54 76" stroke="#5e340c" stroke-width="1.6"/>
+        <path d="M20 8 L 30 30 L 30 40 Q 50 54 70 40 L 70 30 L 80 8 L 73 11 L 64 32 Q 50 41 36 32 L 27 11 Z" fill="url(#gGold)" stroke="#5e340c" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M50 2 L 57 18 L 53.5 18 L 53.5 42 L 46.5 42 L 46.5 18 L 43 18 Z" fill="url(#gGold)" stroke="#5e340c" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="50" cy="45" r="5.5" fill="#3aa0ff" stroke="#fff" stroke-width="1.5"/>
+      </g>
+      <path d="M28 18 L 36 24 L 32 28 L 42 32 M72 18 L 64 24 L 68 28 L 58 32 M50 50 L 44 60 L 52 62 L 46 74" stroke="#c8f6ff" stroke-width="2.2" fill="none" stroke-linejoin="round" filter="url(#fGlow)"/>`,
+    crown: `
+      <g filter="url(#fShadow)">
+        <path d="M14 72 L 8 28 L 30 46 L 50 14 L 70 46 L 92 28 L 86 72 Z" fill="url(#gGold)" stroke="#5e340c" stroke-width="2.5" stroke-linejoin="round"/>
+        <rect x="12" y="68" width="76" height="16" rx="4" fill="url(#gGold)" stroke="#5e340c" stroke-width="2.5"/>
+        <path d="M20 64 L 16 38 M50 22 L 50 40" stroke="#fff" stroke-width="3" opacity=".5" stroke-linecap="round"/>
+        <circle cx="31" cy="76" r="4.5" fill="#ff4d6d" stroke="#fff" stroke-width="1.2"/>
+        <circle cx="50" cy="76" r="5.5" fill="#3aa0ff" stroke="#fff" stroke-width="1.2"/>
+        <circle cx="69" cy="76" r="4.5" fill="#ff4d6d" stroke="#fff" stroke-width="1.2"/>
+      </g>
+      <g filter="url(#fGlow)" fill="#aef1ff"><circle cx="8" cy="28" r="5"/><circle cx="50" cy="14" r="6"/><circle cx="92" cy="28" r="5"/></g>`,
+    charge: `
+      <circle cx="50" cy="50" r="46" fill="url(#gBoltHalo)"/>
+      <path d="M60 4 L 20 56 L 46 56 L 36 96 L 82 38 L 55 38 L 68 4 Z" fill="url(#gBolt)" stroke="#8a4200" stroke-width="2.5" stroke-linejoin="round" filter="url(#fGlow)"/>
+      <path d="M58 12 L 30 50" stroke="#fff" stroke-width="3" opacity=".7" stroke-linecap="round"/>`,
+    dragon: `
+      <g filter="url(#fShadow)">
+        <circle cx="50" cy="50" r="45" fill="url(#gMedalRed)" stroke="url(#gGoldRim)" stroke-width="5"/>
+        <path d="M52 26 L 38 6 L 58 22 Z M62 26 L 60 6 L 68 24 Z" fill="#f6e8c8" stroke="#5c0a22" stroke-width="1.5"/>
+        <path d="M14 76 C 16 46 32 28 58 24 C 72 22 84 30 90 42 L 76 48 L 88 56 C 78 64 66 62 58 60 C 52 68 46 78 44 90 Z" fill="url(#gDragon)" stroke="#3a0612" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M78 50 L 80 56 L 82 50 M84 53 L 85 58 L 87 54" stroke="#fff" stroke-width="1.6" fill="none"/>
+        <path d="M26 64 q 6 -6 12 0 M30 74 q 6 -6 12 0 M36 54 q 6 -6 12 0" stroke="#5c0a22" stroke-width="1.8" fill="none" opacity=".7"/>
+        <path d="M30 44 C 36 34 46 28 58 27" stroke="#fff" stroke-width="2.5" opacity=".45" fill="none" stroke-linecap="round"/>
+      </g>
+      <path d="M64 36 L 76 39 L 67 43 Z" fill="#ffe36b" filter="url(#fGlow)"/>`,
+    wild: `
+      <circle cx="50" cy="50" r="46" fill="url(#gWild)" stroke="#bfe9ff" stroke-width="2.5" filter="url(#fGlow)"/>
+      <g stroke-linecap="round" fill="none">
+        <path d="M50 50 C 50 36 70 34 74 50 C 78 70 50 82 34 70 C 16 56 24 22 50 16" stroke="#fff" stroke-width="5" opacity=".9"/>
+        <path d="M50 50 C 50 36 70 34 74 50 C 78 70 50 82 34 70 C 16 56 24 22 50 16" stroke="#fff" stroke-width="3" opacity=".5" transform="rotate(120 50 50)"/>
+        <path d="M50 50 C 50 36 70 34 74 50 C 78 70 50 82 34 70 C 16 56 24 22 50 16" stroke="#fff" stroke-width="3" opacity=".5" transform="rotate(240 50 50)"/>
+      </g>
+      <text x="50" y="58" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-weight="900" font-size="21" fill="#fff" stroke="#0b2a6b" stroke-width="3" paint-order="stroke" letter-spacing="1">WILD</text>`,
+    mystery: `
+      <circle cx="50" cy="50" r="45" fill="url(#gMystery)" stroke="#b9a7ff" stroke-width="3" filter="url(#fGlow)"/>
+      <text x="50" y="66" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-weight="900" font-size="46" fill="#e8e0ff">?</text>`,
+  };
+
+  let sprite = '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">' + DEFS;
+  for (const [k, body] of Object.entries(ART)) sprite += `<symbol id="sym-${k}" viewBox="0 0 100 100">${body}</symbol>`;
+  sprite += '</svg>';
+  document.body.insertAdjacentHTML('afterbegin', sprite);
+
+  window.symbolSVG = (key) => `<svg class="art" viewBox="0 0 100 100" aria-hidden="true"><use href="#sym-${key}"/></svg>`;
+})();
