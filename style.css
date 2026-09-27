@@ -468,7 +468,7 @@ body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0
 .cell.land .sym, .cell.leaving .sym.old { will-change: transform; }
 .cell.leaving .sym.old {
   visibility: visible;
-  animation: colOut var(--fall, 190ms) cubic-bezier(.5, 0, .9, .5) forwards;
+  animation: colOut var(--fall, 190ms) cubic-bezier(.5, 0, .9, .5) var(--out-delay, 0ms) forwards;
 }
 .cell.land .sym:not(.old) { animation: colIn var(--dur, 380ms) linear both; animation-delay: var(--d, 0ms); }
 

@@ -297,18 +297,38 @@ function animateColumn(c, items, fallMs, lag = ROW_LAG) {
   setTimeout(() => audio.thud(items.length / ROWS), fallMs);
 }
 
-// Tour de base : une colonne après l'autre, la suivante part quand la précédente touche le sol.
+const CLEAR_MS = 220;         // les symboles du tour précédent tombent hors de la grille
+const CLEAR_STAGGER = 30;    // petite vague de gauche à droite pendant le vidage
+
+// Vide la grille : tous les anciens symboles (sauf les Storm Wilds collants) tombent et sortent par le bas.
+async function clearBoard(cells) {
+  const P = rowPitch();
+  for (const [c, r] of cells) {
+    const el = cellEl(c, r);
+    el.classList.remove('land', 'leaving');
+    el.querySelector('.sym').innerHTML = '';
+    el.querySelector('.sym.old').innerHTML = symbolSVG(grid[c][r].s);
+    el.style.setProperty('--to', (ROWS - r) * P + 'px');
+    el.style.setProperty('--fall', CLEAR_MS + 'ms');
+    el.style.setProperty('--out-delay', c * CLEAR_STAGGER + 'ms');
+    void el.offsetWidth;
+    el.classList.add('leaving');
+  }
+  await sleep(CLEAR_MS + (COLS - 1) * CLEAR_STAGGER + 60);
+}
+
+// Tour de base : la grille se vide, puis les colonnes tombent l'une après l'autre.
 async function dropColumns(step) {
-  const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
-  const prev = grid;
   const next = step.grid;
   audio.whoosh();
-  grid = prev.map((col) => col.slice());
+  await clearBoard(step.landed);
+  const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
+  grid = grid.map((col) => col.slice());
   for (let c = 0; c < COLS; c++) {
     const items = [];
     for (let r = 0; r < ROWS; r++) {
       grid[c][r] = next[c][r];
-      if (landed.has(c + ',' + r)) items.push({ c, r, from: -ROWS, old: prev[c][r].s, to: ROWS });
+      if (landed.has(c + ',' + r)) items.push({ c, r, from: -ROWS });
     }
     animateColumn(c, items, FALL_MS);
     await sleep(FALL_MS);
@@ -1311,6 +1331,26 @@ function ambientLightning(lvl) {
   }
 }
 
+// Rain falls in the scenery, behind the grid and the panels.
+function drawRain(lvl) {
+  const target = fx.hush ? 0 : RAIN[lvl] + (fx.downpour > 0 ? 700 : 0);
+  if (fx.downpour > 0) fx.downpour -= 1 / 60;
+  while (drops.length < target) drops.push({ x: Math.random() * W * 1.4 - W * 0.2, y: Math.random() * -H, len: 10 + Math.random() * 18, v: 9 + Math.random() * 9 });
+  if (drops.length > target) drops.length = Math.max(target, drops.length - 12);
+  bctx.strokeStyle = lvl === 4 ? 'rgba(255,190,210,0.35)' : 'rgba(175,200,235,0.35)';
+  bctx.lineWidth = 1;
+  bctx.beginPath();
+  for (const d of drops) {
+    const dx = wind * d.len * 0.9;
+    bctx.moveTo(d.x, d.y);
+    bctx.lineTo(d.x + dx, d.y + d.len);
+    d.y += d.v;
+    d.x += wind * d.v * 0.9;
+    if (d.y > H || d.x > W + 50) { d.y = -20 - Math.random() * 100; d.x = Math.random() * W * 1.4 - W * 0.4; }
+  }
+  bctx.stroke();
+}
+
 function drawVignette(lvl) {
   const g = bctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.3, W / 2, H * 0.5, Math.max(W, H) * 0.8);
   g.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1342,6 +1382,7 @@ function drawBackground() {
   drawGround(lvl);
   drawForeground(lvl);
   drawAirborne(lvl);
+  drawRain(lvl);
 
   // eerie glow behind the board at high levels
   if (lvl >= 3) {
@@ -1360,24 +1401,6 @@ function drawBackground() {
 function drawFx() {
   fctx.clearRect(0, 0, W, H);
   const lvl = state.level;
-
-  // rain
-  const target = fx.hush ? 0 : RAIN[lvl] + (fx.downpour > 0 ? 700 : 0);
-  if (fx.downpour > 0) fx.downpour -= 1 / 60;
-  while (drops.length < target) drops.push({ x: Math.random() * W * 1.4 - W * 0.2, y: Math.random() * -H, len: 10 + Math.random() * 18, v: 9 + Math.random() * 9 });
-  if (drops.length > target) drops.length = Math.max(target, drops.length - 12);
-  fctx.strokeStyle = lvl === 4 ? 'rgba(255,190,210,0.35)' : 'rgba(175,200,235,0.35)';
-  fctx.lineWidth = 1;
-  fctx.beginPath();
-  for (const d of drops) {
-    const dx = wind * d.len * 0.9;
-    fctx.moveTo(d.x, d.y);
-    fctx.lineTo(d.x + dx, d.y + d.len);
-    d.y += d.v;
-    d.x += wind * d.v * 0.9;
-    if (d.y > H || d.x > W + 50) { d.y = -20 - Math.random() * 100; d.x = Math.random() * W * 1.4 - W * 0.4; }
-  }
-  fctx.stroke();
 
   // cyclone around the reels
   if (lvl >= 3 && !fx.hush) {
