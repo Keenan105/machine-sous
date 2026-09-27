@@ -1081,3 +1081,13 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
   #rulesBtn { position: relative; right: auto; bottom: auto; align-self: flex-end; }
 }
 #rulesClose { align-self: center; }
+
+/* smaller SPIN orb */
+#spin { width: 84px; height: 84px; padding: 4px; }
+#spin::before { inset: 4px; }
+#spin::after { inset: 7px 14px auto; }
+#spin .spin-t { font-size: 60px; margin-top: 3px; }
+@media (max-width: 520px) {
+  #spin { width: 78px; height: 78px; }
+  #spin .spin-t { font-size: 56px; }
+}
