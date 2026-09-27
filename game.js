@@ -2779,8 +2779,8 @@ const audio = {
   setLevel(l) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    this.rain.g.gain.setTargetAtTime([0.047, 0.058, 0.07, 0.088, 0.108][l], now, 0.8);
-    this.patter.gain.setTargetAtTime([0.014, 0.018, 0.022, 0.027, 0.033][l], now, 0.8);
+    this.rain.g.gain.setTargetAtTime([0.033, 0.041, 0.049, 0.062, 0.076][l], now, 0.8);
+    this.patter.gain.setTargetAtTime([0.01, 0.013, 0.015, 0.019, 0.023][l], now, 0.8);
     this.wind.g.gain.setTargetAtTime([0, 0.3, 0.45, 0.65, 0.9][l], now, 1.2);
     this.rumbleBed.g.gain.setTargetAtTime([0, 0, 0.3, 0.7, 1.1][l], now, 1.2);
     this.lfo.frequency.setTargetAtTime(0.12 + l * 0.12, now, 1);
