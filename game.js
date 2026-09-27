@@ -685,7 +685,7 @@ function bonusCelebration(win, spins) {
       tierEl.classList.remove('pop');
       void tierEl.offsetWidth;
       tierEl.classList.add('pop');
-      if (t.x > 0) { fx.flash = Math.max(fx.flash, 0.5); audio.thunder(0.5); fx.coinShower(12 + WIN_TIERS.indexOf(t) * 10); }
+      if (t.x > 0) { fx.flash = Math.max(fx.flash, 0.5); audio.thunder(0.5); fx.coinShower(35 + WIN_TIERS.indexOf(t) * 25); }
     };
 
     const finish = () => {
@@ -700,7 +700,7 @@ function bonusCelebration(win, spins) {
         amountEl.classList.add('slam');
         audio.fanfare();
         if (finalX >= 25) audio.boom();
-        fx.coinShower(Math.min(160, 30 + finalX * 0.8));
+        fx.coinShower(Math.min(320, 100 + finalX * 1.5));
         fx.flash = 1;
       }
       ov.querySelector('.bw-skip').textContent = 'Clique pour continuer';
@@ -720,6 +720,8 @@ function bonusCelebration(win, spins) {
 
     if (win <= 0) { finish(); return; }
     setTier(WIN_TIERS[0]);
+    // a steady rain of coins while the total counts up
+    const drizzle = setInterval(() => { if (done) clearInterval(drizzle); else fx.coinShower(6); }, 120);
     const stepFrame = (now) => {
       if (done) return;
       if (start === null) start = now;
