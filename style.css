@@ -956,3 +956,70 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
 #confirmYes { color: #2b1a02; background: linear-gradient(180deg, #ffe89a, #f0b53a 60%, #b8791c); border-color: #ffe7a6; }
 #confirmNo { background: rgba(255, 255, 255, 0.06); }
 #offers[hidden], #buyClose[hidden], .buy-sub[hidden] { display: none; }
+
+/* ---------- bonus win celebration ---------- */
+#bonusWin {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 42%, rgba(34, 44, 76, 0.9), rgba(2, 4, 10, 0.97) 65%);
+  opacity: 0;
+  transition: opacity 0.35s;
+  cursor: pointer;
+  overflow: hidden;
+}
+#bonusWin[hidden] { display: none; }
+#bonusWin.show { opacity: 1; }
+.bw-rays {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 160vmax;
+  height: 160vmax;
+  transform: translate(-50%, -50%);
+  width: 110vmax;
+  height: 110vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 110, 0.09) 0deg 5deg, rgba(255, 214, 110, 0) 5deg 15deg);
+  -webkit-mask: radial-gradient(circle, #000 0 6%, rgba(0, 0, 0, 0.5) 18%, transparent 36%);
+  mask: radial-gradient(circle, #000 0 6%, rgba(0, 0, 0, 0.5) 18%, transparent 36%);
+  animation: rays 18s linear infinite;
+}
+@keyframes rays { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.bw-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.bw-emblem { width: min(300px, 70vw); height: auto; filter: drop-shadow(0 0 24px rgba(127, 211, 255, 0.6)); animation: wxFloat 3s ease-in-out infinite; }
+.bw-tier {
+  font-family: Cinzel, Georgia, serif;
+  font-weight: 900;
+  font-size: clamp(26px, 7vw, 54px);
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #fffbe6 10%, #ffd46b 55%, #b8791c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 #3a2004) drop-shadow(0 0 18px rgba(255, 190, 60, 0.55));
+}
+.bw-tier.pop { animation: tierPop 0.6s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes tierPop { 0% { transform: scale(1.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.bw-amount {
+  font-family: Cinzel, Georgia, serif;
+  font-weight: 900;
+  font-size: clamp(44px, 13vw, 104px);
+  line-height: 1;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px rgba(255, 220, 120, 0.9), 0 4px 0 #6e4308, 0 8px 18px rgba(0, 0, 0, 0.7);
+}
+.bw-amount.slam { animation: slamNum 0.7s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes slamNum { 0% { transform: scale(1.5); } 60% { transform: scale(0.94); } 100% { transform: scale(1); } }
+.bw-x { font-size: clamp(15px, 3.4vw, 22px); font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+.bw-sub { font-size: 14px; color: #b8c4d8; }
+.bw-skip { margin-top: 10px; font-size: 12px; letter-spacing: 0.08em; color: #7f8ca3; text-transform: uppercase; }
+/* each tier warms the light a little more */
+#bonusWin.t2 .bw-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 200, 80, 0.13) 0deg 5deg, rgba(255, 200, 80, 0) 5deg 14deg); }
+#bonusWin.t3 .bw-rays, #bonusWin.t4 .bw-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 180, 70, 0.17) 0deg 5deg, rgba(255, 180, 70, 0) 5deg 13deg); animation-duration: 10s; }
+#bonusWin.t5 .bw-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 90, 120, 0.2) 0deg 5deg, rgba(255, 200, 80, 0.12) 5deg 9deg, rgba(0, 0, 0, 0) 9deg 14deg); animation-duration: 7s; }
+#bonusWin.t4 .bw-tier, #bonusWin.t5 .bw-tier { background: linear-gradient(180deg, #ffffff 10%, #ffb3c2 45%, #ff4d73 75%, #8a1030); -webkit-background-clip: text; background-clip: text; }
+@media (prefers-reduced-motion: reduce) { .bw-rays, .bw-emblem { animation: none; } }

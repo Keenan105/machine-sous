@@ -382,6 +382,7 @@ const EVENT_NAMES = {
 async function play(step) {
   switch (step.type) {
     case 'start':
+      state.boughtKind = null;
       state.charge = 0;
       state.thresholdIdx = 0;
       state.dragon = false;
@@ -525,6 +526,7 @@ async function play(step) {
       break;
 
     case 'buy': {
+      state.boughtKind = step.kind;
       const all = [];
       for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) all.push([c, r]);
       await dropColumns({ grid: step.grid, landed: all });
@@ -554,13 +556,110 @@ async function play(step) {
 
     case 'bonusEnd':
       state.inBonus = false;
-      await banner(`BONUS : +${fmt(step.win)}`, 2000);
       setFreeSpins('');
+      await bonusCelebration(step.win, step.spins);
       break;
 
     case 'end':
       break;
   }
+}
+
+/* ------------------------- bonus win celebration ------------------------- */
+
+const WIN_TIERS = [
+  { x: 0, name: 'GAIN', cls: 't0' },
+  { x: 10, name: 'BEAU GAIN', cls: 't1' },
+  { x: 25, name: 'GROS GAIN', cls: 't2' },
+  { x: 50, name: 'ÉNORME GAIN', cls: 't3' },
+  { x: 100, name: 'GAIN ÉPIQUE', cls: 't4' },
+  { x: 500, name: 'LÉGENDAIRE', cls: 't5' },
+];
+const tierFor = (x) => WIN_TIERS.reduce((t, cur) => (x >= cur.x ? cur : t), WIN_TIERS[0]);
+
+// Full-screen count-up of the bonus total, with tiers, rays and a coin shower.
+function bonusCelebration(win, spins) {
+  return new Promise((resolve) => {
+    const ov = $('#bonusWin');
+    const amountEl = ov.querySelector('.bw-amount');
+    const tierEl = ov.querySelector('.bw-tier');
+    const xEl = ov.querySelector('.bw-x');
+    const b = bet();
+    const finalX = win / b;
+    ov.querySelector('.bw-sub').textContent = `${spins} tour${spins > 1 ? 's' : ''} gratuit${spins > 1 ? 's' : ''} joué${spins > 1 ? 's' : ''}`;
+    ov.querySelector('.bw-emblem').src = `img/${state.boughtKind === 'super' ? 'super' : 'bonus'}.webp`;
+    ov.className = '';
+    ov.hidden = false;
+    void ov.offsetWidth;
+    ov.classList.add('show');
+
+    if (win <= 0) {
+      tierEl.textContent = 'LA TEMPÊTE SE CALME';
+      amountEl.textContent = '0';
+      xEl.textContent = 'Pas de gain cette fois';
+    }
+    // bigger wins count longer
+    const duration = win <= 0 ? 0 : Math.min(6000, 1400 + Math.sqrt(finalX) * 420);
+    let start = null, last = -1, tier = null, done = false, closeTimer = 0;
+
+    const setTier = (t) => {
+      if (tier === t) return;
+      tier = t;
+      tierEl.textContent = t.name;
+      ov.className = 'show ' + t.cls;
+      tierEl.classList.remove('pop');
+      void tierEl.offsetWidth;
+      tierEl.classList.add('pop');
+      if (t.x > 0) { fx.flash = Math.max(fx.flash, 0.5); audio.thunder(0.5); fx.coinShower(12 + WIN_TIERS.indexOf(t) * 10); }
+    };
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      amountEl.textContent = fmt(win);
+      xEl.textContent = win > 0 ? `×${fmt(finalX)} la mise` : xEl.textContent;
+      if (win > 0) {
+        setTier(tierFor(finalX));
+        amountEl.classList.remove('slam');
+        void amountEl.offsetWidth;
+        amountEl.classList.add('slam');
+        audio.fanfare();
+        if (finalX >= 25) audio.boom();
+        fx.coinShower(Math.min(160, 30 + finalX * 0.8));
+        fx.flash = 1;
+      }
+      ov.querySelector('.bw-skip').textContent = 'Clique pour continuer';
+      closeTimer = setTimeout(close, 3200);
+    };
+
+    const close = () => {
+      clearTimeout(closeTimer);
+      ov.removeEventListener('click', onClick);
+      ov.classList.remove('show');
+      setTimeout(() => { ov.hidden = true; resolve(); }, 350);
+    };
+
+    const onClick = () => (done ? close() : finish());
+    ov.addEventListener('click', onClick);
+    ov.querySelector('.bw-skip').textContent = 'Clique pour passer';
+
+    if (win <= 0) { finish(); return; }
+    setTier(WIN_TIERS[0]);
+    const stepFrame = (now) => {
+      if (done) return;
+      if (start === null) start = now;
+      const k = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - k, 3);
+      const v = win * eased;
+      amountEl.textContent = fmt(v);
+      xEl.textContent = `×${fmt(v / b)} la mise`;
+      setTier(tierFor(v / b));
+      const tickStep = Math.floor(k * 40);
+      if (tickStep !== last) { last = tickStep; audio.tick(1 + k * 0.8); }
+      if (k < 1) requestAnimationFrame(stepFrame); else finish();
+    };
+    requestAnimationFrame(stepFrame);
+  });
 }
 
 /* ------------------------- Eye of the Storm (bonus) ------------------------- */
@@ -632,7 +731,7 @@ async function playPaid(cost, makeResult) {
 
   if (result.win === 0) {
     say('Pas de combinaison… la tempête se calme.');
-  } else {
+  } else if (!result.bonus) {
     const x = result.win / bet();
     if (x >= 50) banner(`ÉNORME GAIN ×${fmt(x)}`, 2200);
     else if (x >= 15) banner(`GROS GAIN ×${fmt(x)}`, 1700);
@@ -786,6 +885,12 @@ const fx = {
   hush: false,
   downpour: 0,
   sparks: [],
+  coins: [],
+  coinShower(n) {
+    for (let i = 0; i < n; i++) {
+      this.coins.push({ x: rnd(0, W), y: rnd(-H * 0.6, -20), vx: rnd(-0.6, 0.6), vy: rnd(2, 5), r: rnd(7, 14), a: rnd(0, 6), va: rnd(0.08, 0.2) });
+    }
+  },
   streaks: [],
   rings: [],
   swirl: [],
@@ -1626,6 +1731,30 @@ function drawFx() {
   }
   fx.swirl = fx.swirl.filter((d) => d.life > 0);
 
+  // gold coins raining during the bonus win celebration
+  for (const c of fx.coins) {
+    c.x += c.vx; c.y += c.vy; c.vy += 0.12; c.a += c.va;
+    const sx = Math.abs(Math.cos(c.a));               // spinning coin: width shrinks and grows
+    fctx.save();
+    fctx.translate(c.x, c.y);
+    fctx.scale(Math.max(0.12, sx), 1);
+    const g = fctx.createRadialGradient(-c.r * 0.3, -c.r * 0.3, 1, 0, 0, c.r);
+    g.addColorStop(0, '#fff6c8');
+    g.addColorStop(0.5, Math.cos(c.a) > 0 ? '#f5c23e' : '#d59a20');
+    g.addColorStop(1, '#8a560c');
+    fctx.fillStyle = g;
+    fctx.beginPath();
+    fctx.arc(0, 0, c.r, 0, Math.PI * 2);
+    fctx.fill();
+    fctx.strokeStyle = 'rgba(255, 236, 170, 0.8)';
+    fctx.lineWidth = 1.2;
+    fctx.beginPath();
+    fctx.arc(0, 0, c.r * 0.68, 0, Math.PI * 2);
+    fctx.stroke();
+    fctx.restore();
+  }
+  fx.coins = fx.coins.filter((c) => c.y < H + 30);
+
   // sparks from bursting symbols
   for (const sp of fx.sparks) {
     sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.18; sp.vx *= 0.97; sp.life -= 0.035;
@@ -1775,6 +1904,14 @@ const audio = {
     if (!this.ctx) return;
     this.tone(42, 0.6, 2, 0, 'sine', 30);
     this.burst(this.brown, 'lowpass', 220, 1, 0.3, 2.2, 0, 60);
+  },
+  tick(pitch = 1) {
+    if (this.ctx) this.tone(1400 * pitch, 0.05, 0.05, 0, 'triangle');
+  },
+  fanfare() {
+    if (!this.ctx) return;
+    [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.16, 0.9 - i * 0.1, i * 0.11, 'triangle'));
+    this.tone(1047, 0.12, 1.6, 0.44, 'sine');
   },
   pop(n = 1) {
     if (!this.ctx) return;
