@@ -2,7 +2,7 @@
 
 Prototype jouable d'une machine à sous au thème de tempête fantastique (HTML/CSS/JS, sans dépendance).
 
-**Lancer :** ouvrir `index.html` dans un navigateur, puis cliquer sur SPIN (ou appuyer sur Espace).
+**Lancer en local (lien http) :** sous Windows, double-cliquer sur `lancer.bat` ; la machine s'ouvre sur http://localhost:8000/ (fermer la fenêtre noire pour l'arrêter). Sur Mac ou Linux : `./lancer.command`. On peut aussi ouvrir `index.html` directement.
 **Tester le bonus :** bouton BONUS, ou `stormbound.bonus()` dans la console du navigateur.
 
 ## Architecture
