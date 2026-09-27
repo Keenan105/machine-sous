@@ -26,9 +26,61 @@
     <radialGradient id="gMystery" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#4b3f7a"/><stop offset="1" stop-color="#140f2a"/></radialGradient>
     <filter id="fGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="fShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000" flood-opacity=".55"/></filter>
+    <linearGradient id="wxCloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfdff"/><stop offset=".55" stop-color="#cdd6e4"/><stop offset="1" stop-color="#8c98ae"/></linearGradient>
+    <linearGradient id="wxCloudDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa5b8"/><stop offset=".5" stop-color="#5b667b"/><stop offset="1" stop-color="#2c3444"/></linearGradient>
+    <linearGradient id="wxCloudRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6d5566"/><stop offset=".55" stop-color="#3a2432"/><stop offset="1" stop-color="#1c0d16"/></linearGradient>
+    <linearGradient id="wxDrop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6f6ff"/><stop offset="1" stop-color="#3f95e6"/></linearGradient>
+    <linearGradient id="wxWind" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7fa6cf" stop-opacity=".2"/><stop offset=".35" stop-color="#d9ecff"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <linearGradient id="wxBolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbe2"/><stop offset=".45" stop-color="#ffd44a"/><stop offset="1" stop-color="#f08a16"/></linearGradient>
+    <linearGradient id="wxBoltRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0f3"/><stop offset=".45" stop-color="#ff5577"/><stop offset="1" stop-color="#b3102f"/></linearGradient>
+    <linearGradient id="wxFunnel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4c5f58"/><stop offset=".45" stop-color="#b9cbc3"/><stop offset="1" stop-color="#3e4f49"/></linearGradient>
+    <linearGradient id="wxAnvil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9c2b7"/><stop offset=".6" stop-color="#5f766d"/><stop offset="1" stop-color="#2d3b36"/></linearGradient>
+    <filter id="wxGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>`;
 
   const ART = {
+    wx0: `
+      <path d="M16 38 C8 38 6 28 13 25 C12 16 22 12 28 17 C31 9 45 9 47 19 C55 18 59 27 54 33 C57 37 53 40 49 40 L18 40 C17 40 16 39 16 38 Z" fill="url(#wxCloud)" stroke="#6f7b91" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M17 27 C18 22 23 19 28 21 M30 17 C34 12 42 12 45 19" stroke="#fff" stroke-width="1.6" fill="none" opacity=".8" stroke-linecap="round"/>
+      <g fill="url(#wxDrop)" stroke="#2f6fb3" stroke-width=".6">
+        <path d="M22 45 C22 45 19 50 19 52 A3 3 0 0 0 25 52 C25 50 22 45 22 45 Z"/>
+        <path d="M33 47 C33 47 30 52 30 54 A3 3 0 0 0 36 54 C36 52 33 47 33 47 Z"/>
+        <path d="M44 44 C44 44 41 49 41 51 A3 3 0 0 0 47 51 C47 49 44 44 44 44 Z"/>
+        <path d="M28 55 C28 55 26 58 26 59.5 A2 2 0 0 0 30 59.5 C30 58 28 55 28 55 Z" opacity=".8"/>
+        <path d="M39 56 C39 56 37 59 37 60.5 A2 2 0 0 0 41 60.5 C41 59 39 56 39 56 Z" opacity=".8"/>
+      </g>`,
+    wx1: `
+      <g fill="none" stroke-linecap="round">
+        <path d="M6 22 H36 C43 22 46 14 40 11 C35 9 32 14 35 17" stroke="url(#wxWind)" stroke-width="4"/>
+        <path d="M4 33 H48 C56 33 59 42 52 46 C46 49 42 43 46 40" stroke="url(#wxWind)" stroke-width="4.5"/>
+        <path d="M10 44 H28 C34 44 36 51 31 53 C27 55 24 51 27 49" stroke="url(#wxWind)" stroke-width="3.2"/>
+      </g>
+      <path d="M50 18 C54 12 61 12 61 12 C61 12 60 19 54 21 C52 22 50 21 50 18 Z" fill="#7fbf4a" stroke="#3d6e22" stroke-width="1"/>
+      <path d="M51 20 L59 13" stroke="#dfffc8" stroke-width=".9"/>`,
+    wx2: `
+      <path d="M16 38 C8 38 6 28 13 25 C12 16 22 12 28 17 C31 9 45 9 47 19 C55 18 59 27 54 33 C57 37 53 40 49 40 L18 40 C17 40 16 39 16 38 Z" transform="translate(0 -4)" fill="url(#wxCloudDark)" stroke="#262d3a" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M17 23 C18 18 23 15 28 17 M30 13 C34 8 42 8 45 15" stroke="#c3cbd8" stroke-width="1.4" fill="none" opacity=".7" stroke-linecap="round"/>
+      <path d="M35 33 L24 48 L32 48 L27 61 L44 42 L35 42 L40 33 Z" fill="url(#wxBolt)" stroke="#9a4a05" stroke-width="1.2" stroke-linejoin="round" filter="url(#wxGlow)"/>
+      <path d="M36 35 L29 45" stroke="#fff" stroke-width="1.3" opacity=".8" stroke-linecap="round"/>
+      <g stroke="#9ec9f5" stroke-width="1.6" stroke-linecap="round" opacity=".75"><path d="M18 42 L16 47 M49 40 L47 45 M20 52 L18 56"/></g>`,
+    wx3: `
+      <path d="M4 16 C10 8 22 6 32 9 C42 6 56 8 60 16 C56 20 46 21 32 20 C18 21 8 20 4 16 Z" fill="url(#wxAnvil)" stroke="#23302b" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M10 14 C18 10 28 10 32 12 C38 10 48 10 54 14" stroke="#e1f0e8" stroke-width="1.2" fill="none" opacity=".6"/>
+      <path d="M18 20 C22 28 28 32 29 38 C30 45 33 50 31 58 L35 58 C36 50 34 45 36 39 C38 33 44 27 47 20 Z" fill="url(#wxFunnel)" stroke="#23302b" stroke-width="1.2" stroke-linejoin="round"/>
+      <g stroke="#e7f3ed" stroke-width="1.1" fill="none" opacity=".7" stroke-linecap="round">
+        <path d="M22 25 C28 28 38 28 43 25"/><path d="M26 32 C30 34 36 34 40 32"/><path d="M29 40 C31 41 35 41 37 40"/><path d="M30 48 C32 49 34 49 35 48"/>
+      </g>
+      <g fill="#3a4a44"><circle cx="24" cy="54" r="1.6"/><circle cx="41" cy="52" r="1.3"/><circle cx="20" cy="47" r="1"/><rect x="43" y="57" width="3" height="1.6" rx=".5"/><rect x="18" y="58" width="2.6" height="1.4" rx=".5"/></g>`,
+    wx4: `
+      <path d="M16 38 C8 38 6 28 13 25 C12 16 22 12 28 17 C31 9 45 9 47 19 C55 18 59 27 54 33 C57 37 53 40 49 40 L18 40 C17 40 16 39 16 38 Z" transform="translate(0 -6)" fill="url(#wxCloudRed)" stroke="#12060c" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M16 32 C22 34 42 34 50 32" stroke="#ff4d73" stroke-width="1.6" fill="none" opacity=".7" filter="url(#wxGlow)"/>
+      <path d="M30 32 L22 45 L29 45 L23 60 L38 41 L31 41 L36 32 Z" fill="url(#wxBoltRed)" stroke="#5c0418" stroke-width="1.1" stroke-linejoin="round" filter="url(#wxGlow)"/>
+      <path d="M42 33 L38 41 L43 41 L40 50 L49 38 L44 38 L47 33 Z" fill="url(#wxBoltRed)" stroke="#5c0418" stroke-width=".9" stroke-linejoin="round" opacity=".9"/>
+      <g fill="#ff9aa9" opacity=".8"><circle cx="15" cy="46" r="1"/><circle cx="52" cy="50" r="1.2"/><circle cx="46" cy="58" r=".9"/></g>`,
+    bolt: `
+      <path d="M36 4 L14 36 L29 36 L24 60 L50 26 L34 26 L42 4 Z" fill="url(#wxBolt)" stroke="#8a4200" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M36 9 L22 31" stroke="#fff" stroke-width="2.2" opacity=".75" stroke-linecap="round"/>`,
+
     leaf: `
       <g filter="url(#fShadow)">
         <path d="M18 84 C 16 44 46 14 88 12 C 90 52 62 84 18 84 Z" fill="url(#gLeaf)" stroke="#164f18" stroke-width="2.5"/>
@@ -128,7 +180,10 @@
   };
 
   let sprite = '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">' + DEFS;
-  for (const [k, body] of Object.entries(ART)) sprite += `<symbol id="sym-${k}" viewBox="0 0 100 100">${body}</symbol>`;
+  for (const [k, body] of Object.entries(ART)) {
+    const vb = k.startsWith('wx') || k === 'bolt' ? '0 0 64 64' : '0 0 100 100';
+    sprite += `<symbol id="sym-${k}" viewBox="${vb}">${body}</symbol>`;
+  }
   sprite += '</svg>';
   document.body.insertAdjacentHTML('afterbegin', sprite);
 

@@ -18,23 +18,48 @@
     </header>
 
     <section id="weather" aria-label="Niveau de tempête">
-      <div class="steps">
-        <div class="step" data-l="0"><span>🌧️</span><small>Pluie</small></div>
-        <div class="step" data-l="1"><span>💨</span><small>Vent</small></div>
-        <div class="step" data-l="2"><span>⚡</span><small>Orage</small></div>
-        <div class="step" data-l="3"><span>🌪️</span><small>Supercellule</small></div>
-        <div class="step" data-l="4"><span>🌩️</span><small>Stormbound</small></div>
+      <div class="meter">
+        <div class="groove"><div class="energy"></div></div>
+        <div class="steps">
+          <div class="step" data-l="0">
+            <div class="medal"><div class="glass"><svg class="wx" viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-wx0"/></svg></div></div>
+            <small>Pluie</small><em>×1</em>
+          </div>
+          <div class="step" data-l="1">
+            <div class="medal"><div class="glass"><svg class="wx" viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-wx1"/></svg></div></div>
+            <small>Vent</small><em>×1,5</em>
+          </div>
+          <div class="step" data-l="2">
+            <div class="medal"><div class="glass"><svg class="wx" viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-wx2"/></svg></div></div>
+            <small>Orage</small><em>×2</em>
+          </div>
+          <div class="step" data-l="3">
+            <div class="medal"><div class="glass"><svg class="wx" viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-wx3"/></svg></div></div>
+            <small>Supercellule</small><em>×3</em>
+          </div>
+          <div class="step" data-l="4">
+            <div class="medal"><div class="glass"><svg class="wx" viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-wx4"/></svg></div></div>
+            <small>Stormbound</small><em>×5</em>
+          </div>
+        </div>
       </div>
-      <div class="intensity"><div class="bar"></div></div>
       <div class="mult">Multiplicateur météo <b id="mult">×1</b></div>
     </section>
 
     <section id="gauge" aria-label="Storm Charge">
-      <div class="label">⚡ Storm Charge <b id="chargeVal">0</b>/4 ⚡</div>
-      <div class="track">
-        <div class="fill"></div>
-        <i style="left:50%"></i><i style="left:75%"></i>
-        <em class="eye-mark">🌀</em>
+      <div class="charge-head">
+        <svg class="bolt-ico" viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-bolt"/></svg>
+        <span>Storm Charge</span>
+        <b><span id="chargeVal">0</span> / 4</b>
+      </div>
+      <div class="charge-row">
+        <div class="cells">
+          <div class="slot" data-i="0"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-bolt"/></svg></div>
+          <div class="slot" data-i="1"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-bolt"/></svg><small>Événement</small></div>
+          <div class="slot" data-i="2"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-bolt"/></svg><small>Événement</small></div>
+          <div class="slot" data-i="3"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sym-bolt"/></svg><small>Bonus</small></div>
+        </div>
+        <img class="charge-goal" src="img/bonus.webp" alt="Eye of the Storm">
       </div>
     </section>
 

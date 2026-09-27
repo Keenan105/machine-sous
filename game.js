@@ -106,10 +106,17 @@ function updateUI() {
   $('#auto').classList.toggle('on', state.auto);
 }
 
+let shownBolts = 0;
 function updateGauge() {
-  $('#gauge .fill').style.width = state.charge + '%';
-  $('#chargeVal').textContent = Math.round(state.charge / CONFIG.chargePerBolt);
-  document.querySelectorAll('.track i').forEach((el, i) => el.classList.toggle('hit', i < state.thresholdIdx));
+  const bolts = Math.round(state.charge / CONFIG.chargePerBolt);
+  $('#chargeVal').textContent = bolts;
+  document.querySelectorAll('.slot').forEach((el, i) => {
+    const on = i < bolts;
+    if (on && i >= shownBolts) { el.classList.remove('charged'); void el.offsetWidth; el.classList.add('charged'); }
+    el.classList.toggle('on', on);
+  });
+  shownBolts = bolts;
+  $('.charge-goal').classList.toggle('ready', bolts >= 4);
 }
 
 function updateWeatherUI() {
@@ -120,9 +127,10 @@ function updateWeatherUI() {
   });
   const cur = LEVELS[state.level];
   const next = LEVELS[state.level + 1];
-  const pct = next ? (state.intensity - cur.need) / (next.need - cur.need) : 1;
-  $('.intensity .bar').style.width = Math.max(0, Math.min(1, pct)) * 100 + '%';
-  $('#mult').textContent = '×' + cur.mult;
+  const frac = next ? Math.max(0, Math.min(1, (state.intensity - cur.need) / (next.need - cur.need))) : 0;
+  // the groove runs from the first to the last medallion: 4 segments
+  $('.groove .energy').style.width = ((state.level + frac) / (LEVELS.length - 1)) * 100 + '%';
+  $('#mult').textContent = '×' + String(cur.mult).replace('.', ',');
 }
 
 function updateZonesUI() {
@@ -134,7 +142,7 @@ function updateZonesUI() {
   document.querySelectorAll('.zone').forEach((el) => el.classList.toggle('storm', state.stormZones[+el.dataset.z]));
   const ds = $('#dragonStatus');
   ds.classList.toggle('active', state.dragon);
-  ds.textContent = state.dragon ? '🐉 Le Gardien veille et frappe à chaque éclair' : 'Gardien endormi (🐉 pour l\'invoquer)';
+  ds.textContent = state.dragon ? 'Le Gardien veille et frappe à chaque éclair' : 'Gardien endormi : un symbole dragon le réveille';
   $('#dragon').classList.toggle('active', state.dragon);
 }
 
@@ -201,7 +209,7 @@ function bodyFx(cls, ms) {
 // Each weather level gets its own entrance.
 async function levelTransition(level) {
   const L = LEVELS[level];
-  const title = `${L.icon} ${L.name.toUpperCase()} ×${L.mult}`;
+  const title = `${L.name.toUpperCase()} ×${String(L.mult).replace('.', ',')}`;
   const ov = $('#transition');
   const hud = document.querySelector(`.step[data-l="${level}"]`);
   hud.classList.remove('levelup');
@@ -365,10 +373,10 @@ async function refillColumns(step) {
 /* ------------------------- replay of engine steps ------------------------- */
 
 const EVENT_NAMES = {
-  lightning: '⚡ ÉCLAIR',
-  gust: '💨 RAFALE',
-  downpour: '🌧️ PLUIE TORRENTIELLE',
-  eye: '👁️ ŒIL DU CYCLONE',
+  lightning: 'ÉCLAIR',
+  gust: 'RAFALE',
+  downpour: 'PLUIE TORRENTIELLE',
+  eye: 'ŒIL DU CYCLONE',
 };
 
 async function play(step) {
@@ -410,7 +418,7 @@ async function play(step) {
       updateZonesUI();
       for (const [c, r] of step.cells) paintCell(c, r, 'struck');
       audio.roar();
-      banner('🐉 LE GARDIEN SE RÉVEILLE');
+      banner('LE GARDIEN SE RÉVEILLE');
       say('Le Gardien de la Tempête apparaît derrière la grille…');
       await sleep(900);
       break;
@@ -433,7 +441,7 @@ async function play(step) {
       for (const [c, r] of step.cells) paintCell(c, r, 'struck');
       updateZonesUI();
       const zn = ZONE_NAMES[step.zone];
-      if (step.becameStorm) await banner(`🌩️ ZONE ${zn} : ZONE DE TEMPÊTE`);
+      if (step.becameStorm) await banner(`ZONE ${zn} : ZONE DE TEMPÊTE`);
       say(`Le Gardien frappe la zone ${zn} (${step.stormZones[step.zone] ? 'zone de tempête' : step.zoneHits[step.zone] + '/3'})`);
       await sleep(400);
       break;
@@ -520,7 +528,7 @@ async function play(step) {
       const all = [];
       for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) all.push([c, r]);
       await dropColumns({ grid: step.grid, landed: all });
-      await banner(step.kind === 'super' ? '🌩️ SUPER BONUS ACHETÉ' : '🌀 BONUS ACHETÉ', 1200);
+      await banner(step.kind === 'super' ? 'SUPER BONUS ACHETÉ' : 'BONUS ACHETÉ', 1200);
       break;
     }
 
@@ -529,24 +537,24 @@ async function play(step) {
       break;
 
     case 'freeSpin':
-      setFreeSpins(`🌀 EYE OF THE STORM · tour gratuit ${step.n} · encore ${step.left}`);
+      setFreeSpins(`EYE OF THE STORM · tour gratuit ${step.n} · encore ${step.left}`);
       await sleep(350);
       break;
 
     case 'retrigger': {
-      await banner(`🌀 +${step.added} TOURS GRATUITS`);
+      await banner(`+${step.added} TOURS GRATUITS`);
       fx.flash = 1;
       audio.boom();
       grid = step.grid;
       for (const [c, r] of step.cells) paintCell(c, r, 'wildborn');
-      setFreeSpins(`🌀 EYE OF THE STORM · encore ${step.spinsLeft}`);
+      setFreeSpins(`EYE OF THE STORM · encore ${step.spinsLeft}`);
       await sleep(600);
       break;
     }
 
     case 'bonusEnd':
       state.inBonus = false;
-      await banner(`🌀 BONUS : +${fmt(step.win)}`, 2000);
+      await banner(`BONUS : +${fmt(step.win)}`, 2000);
       setFreeSpins('');
       break;
 
@@ -581,7 +589,7 @@ async function eyeOfTheStorm(step) {
   await sleep(500);
   $('#eye').classList.add('show');
   audio.restore();
-  await banner('🌀 EYE OF THE STORM', 1600);
+  await banner('EYE OF THE STORM', 1600);
   await sleep(700);
 
   board.classList.remove('vanish');
@@ -600,7 +608,7 @@ async function eyeOfTheStorm(step) {
     await sleep(170);
   }
   $('#eye').classList.remove('show');
-  setFreeSpins(`🌀 EYE OF THE STORM · ${step.spins} tours gratuits`);
+  setFreeSpins(`EYE OF THE STORM · ${step.spins} tours gratuits`);
   say(`${step.cells.length} Storm Wilds 🌀 restent en place, le Gardien veille pendant ${step.spins} tours gratuits !`);
   await sleep(700);
 }
@@ -626,8 +634,8 @@ async function playPaid(cost, makeResult) {
     say('Pas de combinaison… la tempête se calme.');
   } else {
     const x = result.win / bet();
-    if (x >= 50) banner(`💥 ÉNORME GAIN ×${fmt(x)}`, 2200);
-    else if (x >= 15) banner(`✨ GROS GAIN ×${fmt(x)}`, 1700);
+    if (x >= 50) banner(`ÉNORME GAIN ×${fmt(x)}`, 2200);
+    else if (x >= 15) banner(`GROS GAIN ×${fmt(x)}`, 1700);
   }
   state.busy = false;
   updateUI();
