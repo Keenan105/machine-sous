@@ -194,7 +194,7 @@
         if (k < kept.length) {
           const { cell, from } = kept[k++];
           g[c][r] = cell;
-          if (from !== r) moved.push([c, r]);
+          if (from !== r) moved.push([c, r, from]);
         } else {
           g[c][r] = { s: gen ? gen(c) : genSymbol(ctx, c), life: 0 };
           landed.push([c, r]);

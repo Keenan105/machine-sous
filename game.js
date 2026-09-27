@@ -51,7 +51,7 @@ for (let r = 0; r < ROWS; r++) {
   for (let c = 0; c < COLS; c++) {
     const el = document.createElement('div');
     el.className = 'cell';
-    el.innerHTML = '<span class="sym"></span>';
+    el.innerHTML = '<span class="sym"></span><span class="sym old"></span>';
     board.appendChild(el);
     cellEls.push(el);
   }
@@ -183,32 +183,75 @@ function showLevel(level, intensity, announce) {
 
 /* ------------------------- column-by-column drop ------------------------- */
 
-const COL_STAGGER = 140;     // délai entre deux colonnes (ms)
-const ROW_STAGGER = 35;      // dans une colonne, la rangée du bas se pose en premier
-const REFILL_STAGGER = 90;   // cascades : délai entre colonnes
-const OUT_TIME = 170;        // les anciens symboles tombent hors de la grille
+const FALL_MS = 260;         // chute d'une colonne au tour de base (ms)
+const CASCADE_FALL_MS = 200; // chute d'une colonne pendant les cascades
+const LAND_SHARE = 0.68;     // part de l'animation consacrée à la chute, le reste est le rebond
 
-// Chaque colonne vide ses anciens symboles puis reçoit les nouveaux, de gauche à droite.
+// Distance en pixels entre deux rangées de la grille.
+function rowPitch() {
+  return cellEl(0, 1).getBoundingClientRect().top - cellEl(0, 0).getBoundingClientRect().top;
+}
+
+// Anime une colonne : les anciens symboles sortent par le bas, les nouveaux tombent et rebondissent.
+function animateColumn(c, items, fallMs) {
+  const P = rowPitch();
+  const total = Math.round(fallMs / LAND_SHARE);
+  for (const it of items) {
+    paintCell(it.c, it.r);
+    const el = cellEl(it.c, it.r);
+    el.style.setProperty('--from', it.from * P + 'px');
+    el.style.setProperty('--bounce', -Math.max(4, P * 0.1) + 'px');
+    el.style.setProperty('--dur', total + 'ms');
+    el.style.setProperty('--fall', fallMs + 'ms');
+    if (it.old) {
+      el.querySelector('.sym.old').textContent = SYMBOLS[it.old].e;
+      el.style.setProperty('--to', it.to * P + 'px');
+    }
+    void el.offsetWidth;
+    el.classList.add('land');
+    if (it.old) el.classList.add('leaving');
+  }
+  setTimeout(() => audio.thud(items.length / ROWS), fallMs);
+}
+
+// Tour de base : une colonne après l'autre, la suivante part quand la précédente touche le sol.
 async function dropColumns(step) {
   const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
+  const prev = grid;
   const next = step.grid;
   audio.whoosh();
-  const done = [];
+  grid = prev.map((col) => col.slice());
   for (let c = 0; c < COLS; c++) {
-    done.push(new Promise((resolve) => setTimeout(async () => {
-      for (let r = 0; r < ROWS; r++) if (landed.has(c + ',' + r)) flashCells([[c, r]], 'out');
-      await sleep(OUT_TIME);
-      for (let r = 0; r < ROWS; r++) {
-        grid[c][r] = next[c][r];
-        paintCell(c, r, landed.has(c + ',' + r) ? 'drop' : null, (ROWS - 1 - r) * ROW_STAGGER);
-      }
-      setTimeout(() => audio.thud(1), 300);
-      resolve();
-    }, c * COL_STAGGER)));
+    const items = [];
+    for (let r = 0; r < ROWS; r++) {
+      grid[c][r] = next[c][r];
+      if (landed.has(c + ',' + r)) items.push({ c, r, from: -ROWS, old: prev[c][r].s, to: ROWS });
+    }
+    animateColumn(c, items, FALL_MS);
+    await sleep(FALL_MS);
   }
-  await Promise.all(done);
   grid = next;
-  await sleep(420 + (ROWS - 1) * ROW_STAGGER);
+  await sleep(Math.round(FALL_MS / LAND_SHARE) - FALL_MS);
+}
+
+// Cascade : les symboles restants glissent vers le bas, les nouveaux tombent du haut, colonne par colonne.
+async function refillColumns(step) {
+  const next = step.grid;
+  const byCol = new Map();
+  const add = (c, it) => { if (!byCol.has(c)) byCol.set(c, []); byCol.get(c).push(it); };
+  for (const [c, r, from] of step.moved) add(c, { c, r, from: from - r });
+  const newCount = {};
+  for (const [c] of step.landed) newCount[c] = (newCount[c] || 0) + 1;
+  for (const [c, r] of step.landed) add(c, { c, r, from: -newCount[c] });
+  grid = next;
+  for (let c = 0; c < COLS; c++) if (!byCol.has(c)) for (let r = 0; r < ROWS; r++) paintCell(c, r);
+  const cols = [...byCol.keys()].sort((a, b) => a - b);
+  for (const c of cols) {
+    for (let r = 0; r < ROWS; r++) if (!byCol.get(c).some((it) => it.r === r)) paintCell(c, r);
+    animateColumn(c, byCol.get(c), CASCADE_FALL_MS);
+    await sleep(CASCADE_FALL_MS);
+  }
+  await sleep(Math.round(CASCADE_FALL_MS / LAND_SHARE) - CASCADE_FALL_MS + 60);
 }
 
 /* ------------------------- replay of engine steps ------------------------- */
@@ -237,18 +280,9 @@ async function play(step) {
       await dropColumns(step);
       break;
 
-    case 'refill': {
-      grid = step.grid;
-      paintAll();
-      const cols = new Set([...step.moved, ...step.landed].map(([c]) => c));
-      const order = [...cols].sort((x, y) => x - y);
-      const colDelay = (c) => order.indexOf(c) * REFILL_STAGGER;
-      for (const [c, r] of step.moved) paintCell(c, r, 'fall', colDelay(c));
-      for (const [c, r] of step.landed) paintCell(c, r, 'drop', colDelay(c) + (ROWS - 1 - r) * ROW_STAGGER);
-      order.forEach((c) => setTimeout(() => audio.thud(0.5), colDelay(c) + 300));
-      await sleep(Math.max(0, order.length - 1) * REFILL_STAGGER + 520);
+    case 'refill':
+      await refillColumns(step);
       break;
-    }
 
     case 'absorb':
       flashCells(step.cells, 'absorb');

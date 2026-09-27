@@ -442,7 +442,23 @@ body[data-level="4"] h1 { background: linear-gradient(180deg, #fff 10%, #ff9fb3 
 }
 body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0 36px rgba(127, 211, 255, 0.3); }
 
-/* column-by-column drop */
-.cell.out .sym { animation: dropOut 0.17s ease-in forwards; }
-@keyframes dropOut { to { transform: translateY(170%); opacity: 0; } }
-.cell.drop .sym { animation-duration: 0.42s; }
+/* column-by-column drop: symbols never fade, they fall through the board */
+#board { overflow: clip; overflow-clip-margin: 6px; }
+.cell .sym { position: relative; z-index: 2; }
+.cell .sym.old {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+}
+.cell.leaving .sym.old { visibility: visible; animation: colOut var(--fall, 260ms) cubic-bezier(.55, 0, 1, .45) forwards; }
+.cell.land .sym:not(.old) { animation: colIn var(--dur, 380ms) linear both; }
+@keyframes colOut { from { transform: translateY(0); } to { transform: translateY(var(--to, 500px)); } }
+@keyframes colIn {
+  0% { transform: translateY(var(--from, -500px)); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  68% { transform: translateY(0); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  84% { transform: translateY(var(--bounce, -6px)); animation-timing-function: cubic-bezier(.6, 0, .8, .4); }
+  100% { transform: translateY(0); }
+}
