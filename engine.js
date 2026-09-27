@@ -69,10 +69,10 @@
 
   // Achats de bonus : prix en multiples de la mise, calés par simulation (simulate.js --buy).
   const BONUS_BUYS = {
-    // Valeur moyenne ≈ 19,2× la mise → RTP ≈ 96 % à 20×.
-    eye:   { name: 'Eye of the Storm',       cost: 20, spins: 4, wilds: [1, 2], wildChance: 0.37, startLevel: 1, dragon: true },
-    // Valeur moyenne ≈ 30,8× la mise → RTP ≈ 96 % à 32×.
-    super: { name: 'Super Eye of the Storm', cost: 32, spins: 4, wilds: [2, 3], wildChance: 0.47, startLevel: 1, dragon: true },
+    // 6 tours, 1 Storm Wild, départ sous la Pluie, sans Gardien : valeur ≈ 19,1× → RTP ≈ 96 % à 20×.
+    eye:   { name: 'Eye of the Storm',       cost: 20, spins: 6, wilds: [1, 1], startLevel: 0, dragon: false },
+    // 6 tours, 1 à 2 Storm Wilds (26 % de chance d'en avoir 2), Gardien actif : valeur ≈ 30,7× → RTP ≈ 96 % à 32×.
+    super: { name: 'Super Eye of the Storm', cost: 32, spins: 6, wilds: [1, 2], wildChance: 0.26, startLevel: 0, dragon: true },
   };
 
   /* ---------- helpers ---------- */

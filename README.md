@@ -22,8 +22,8 @@ Prototype jouable d'une machine à sous au thème de tempête fantastique (HTML/
 ### Achat de bonus (boutons BONUS et SUPER)
 | Achat | Prix | Contenu | RTP (simulation) |
 |---|---|---|---|
-| Eye of the Storm | 20× la mise | 4 tours gratuits, 1–2 Storm Wilds, départ au Vent, Gardien actif | ≈ 96,0 % |
-| Super Eye of the Storm | 32× la mise | 4 tours gratuits, 2–3 Storm Wilds, départ au Vent, Gardien actif | ≈ 96,2 % |
+| Eye of the Storm | 20× la mise | 6 tours gratuits, 1 Storm Wild, départ sous la Pluie | ≈ 95,8 % |
+| Super Eye of the Storm | 32× la mise | 6 tours gratuits, 1–2 Storm Wilds (26 % de chance d'en avoir 2), Gardien actif | ≈ 95,6 % |
 
 Le bonus gagné naturellement (4 ⚡) reste de 8 tours gratuits.
 

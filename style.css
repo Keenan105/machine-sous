@@ -1101,3 +1101,11 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
 }
 #spin:hover .spin-bolt { transform: scale(1.08) rotate(-4deg); }
 @media (max-width: 520px) { #spin .spin-bolt { width: 54px; height: 54px; } }
+
+/* SPIN orb in deep violet */
+#spin { box-shadow: 0 6px 14px rgba(0, 0, 0, 0.7), 0 0 24px rgba(140, 70, 230, 0.55); }
+#spin::before {
+  background:
+    conic-gradient(from 0deg, rgba(200, 160, 255, 0), rgba(200, 160, 255, 0.45), rgba(70, 20, 140, 0) 35%, rgba(220, 190, 255, 0.4) 60%, rgba(70, 20, 140, 0) 80%),
+    radial-gradient(circle at 50% 38%, #9a6ae0, #4a1a8c 45%, #1c0636 82%);
+}
