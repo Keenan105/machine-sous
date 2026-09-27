@@ -55,6 +55,7 @@ for (let r = 0; r < ROWS; r++) {
     // Once a symbol has landed, drop the landing classes so other effects (win, burst, strike…) can play.
     el.addEventListener('animationend', (e) => {
       if (e.animationName === 'colIn') el.classList.remove('land', 'leaving');
+      if (e.animationName === 'reelStop') el.classList.remove('reelstop');
     });
     board.appendChild(el);
     cellEls.push(el);
@@ -333,23 +334,56 @@ async function clearBoard(cells) {
 }
 
 // Tour de base : la grille se vide, puis les colonnes tombent l'une après l'autre.
+const REEL_SPIN_MS = 520;     // every reel spins at least this long
+const REEL_STOP_GAP = 170;   // then they stop one after another, left to right
+const REEL_POOL = ['leaf', 'drop', 'rock', 'ice', 'wolf', 'eagle', 'trident', 'crown', 'charge'];
+
+// Classic reels: every column spins (the grid is never empty), then stops in turn with a bounce.
 async function dropColumns(step) {
   const next = step.grid;
-  audio.whoosh();
-  await clearBoard(step.landed);
   const landed = new Set(step.landed.map(([c, r]) => c + ',' + r));
-  grid = grid.map((col) => col.slice());
+  const boardRect = board.getBoundingClientRect();
+  const reels = [];
+  audio.whoosh();
   for (let c = 0; c < COLS; c++) {
-    const items = [];
+    const top = cellEl(c, 0).getBoundingClientRect(), bot = cellEl(c, ROWS - 1).getBoundingClientRect();
+    const pitch = rowPitch();
+    const reel = document.createElement('div');
+    reel.className = 'reel';
+    reel.style.left = top.left - boardRect.left + 'px';
+    reel.style.top = top.top - boardRect.top + 'px';
+    reel.style.width = top.width + 'px';
+    reel.style.height = bot.bottom - top.top + 'px';
+    const track = document.createElement('div');
+    track.className = 'reel-track';
+    const n = 10;
+    const syms = Array.from({ length: n }, () => REEL_POOL[rand(REEL_POOL.length)]);
+    track.innerHTML = [...syms, ...syms].map((k) => `<div class="reel-sym" style="height:${pitch}px">${symbolSVG(k)}</div>`).join('');
+    track.style.setProperty('--loop', -n * pitch + 'px');
+    track.style.animationDuration = 60 * n + 'ms';
+    track.style.animationDelay = -rand(600) + 'ms';
+    reel.appendChild(track);
+    board.appendChild(reel);
+    reels.push(reel);
+    // hide the old symbols behind the spinning reel, except sticky wilds that stay put
+    for (let r = 0; r < ROWS; r++) if (landed.has(c + ',' + r)) cellEl(c, r).classList.add('spinning');
+  }
+  await sleep(REEL_SPIN_MS);
+  for (let c = 0; c < COLS; c++) {
     for (let r = 0; r < ROWS; r++) {
       grid[c][r] = next[c][r];
-      if (landed.has(c + ',' + r)) items.push({ c, r, from: -ROWS });
+      if (!landed.has(c + ',' + r)) continue;
+      paintCell(c, r, 'reelstop', 0);
     }
-    animateColumn(c, items, FALL_MS);
-    await sleep(FALL_MS);
+    const reel = reels[c];
+    reel.classList.add('stopping');
+    setTimeout(() => reel.remove(), 140);
+    audio.thud(0.8);
+    audio.clack(2);
+    await sleep(REEL_STOP_GAP);
   }
   grid = next;
-  await sleep(Math.round(FALL_MS / LAND_SHARE) - FALL_MS + (ROWS - 1) * ROW_LAG);
+  await sleep(260);
 }
 
 // Cascade : les symboles restants glissent vers le bas, les nouveaux tombent du haut, colonne par colonne.
@@ -379,6 +413,7 @@ const EVENT_NAMES = {
   gust: 'RAFALE',
   downpour: 'PLUIE TORRENTIELLE',
   eye: 'ŒIL DU CYCLONE',
+  mystery: 'GAIN MYSTÈRE',
 };
 
 async function play(step) {
@@ -502,7 +537,7 @@ async function play(step) {
         audio.downpour();
         fx.downpour = 3.5;
         say(`Des rangées chargées de ${SYMBOLS[step.sym].e} s'abattent sur la grille`);
-      } else if (step.name === 'eye') {
+      } else if (step.name === 'eye' || step.name === 'mystery') {
         audio.silence(0.35);
         board.classList.add('slow');
         for (const [c, r] of step.cells) {
@@ -519,6 +554,21 @@ async function play(step) {
         await sleep(500);
       }
       break;
+
+    case 'expand': {
+      await banner('SYMBOLES EXPANSIFS', 1000);
+      grid = step.grid;
+      for (const c of step.cols) {
+        const colCells = step.cells.filter(([cc]) => cc === c);
+        colCells.forEach(([cc, r], k) => setTimeout(() => paintCell(cc, r, 'reveal'), k * 60));
+        const zoneEl = cellEl(c, 2);
+        strike(zoneEl, 1.2);
+        audio.zap(3);
+      }
+      say(`Une colonne entière se remplit de ${SYMBOLS[step.sym].name.toLowerCase()}s`);
+      await sleep(700);
+      break;
+    }
 
     case 'convert':
       grid = step.grid;
@@ -761,6 +811,8 @@ async function spin(forced) {
 const BUY_INFO = {
   eye: { icon: 'bonus', lines: ['6 tours gratuits', '1 Storm Wild collant', 'Départ sous la Pluie', 'La tempête monte à chaque cascade'] },
   super: { icon: 'super', lines: ['6 tours gratuits', '1 à 2 Storm Wilds collants', 'Le Gardien frappe à chaque tour', 'Départ sous la Pluie'] },
+  mystery: { icon: 'mystery', lines: ['6 tours gratuits', '1 à 2 Storm Wilds collants', 'À chaque tour : 3 à 5 cases cachées', 'Révélées en un même symbole de valeur'] },
+  expand: { icon: 'expand', lines: ['6 tours gratuits', '1 à 2 Storm Wilds collants', 'À chaque tour : une colonne entière', "d'un même symbole de valeur, et le Gardien"] },
 };
 
 function renderOffers(only) {

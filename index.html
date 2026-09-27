@@ -81,6 +81,20 @@
             <span class="buy-price" data-price="super">32</span>
           </span>
         </button>
+        <button class="buy-btn buy-mystery" data-kind="mystery" title="Acheter Gain Mystère">
+          <img class="buy-icon" src="img/mystery.webp" alt="">
+          <span class="buy-text">
+            <span class="buy-label">MYSTÈRE</span>
+            <span class="buy-price" data-price="mystery">50</span>
+          </span>
+        </button>
+        <button class="buy-btn buy-expand" data-kind="expand" title="Acheter Symboles Expansifs">
+          <img class="buy-icon" src="img/expand.webp" alt="">
+          <span class="buy-text">
+            <span class="buy-label">EXPANSIF</span>
+            <span class="buy-price" data-price="expand">100</span>
+          </span>
+        </button>
       </div>
       <section id="boardWrap">
         <div id="dragon" aria-hidden="true">🐉</div>
@@ -146,7 +160,7 @@
           <ol>
             <li>Choisis ta <b>mise</b> avec − et + (de 0,20 à 50).</li>
             <li>Appuie sur le <b>bouton couronne</b>.</li>
-            <li>Les symboles de la partie précédente tombent, puis les nouveaux arrivent colonne par colonne.</li>
+            <li>Les six colonnes tournent, puis s'arrêtent l'une après l'autre, de gauche à droite.</li>
             <li>Le gain du tour s'affiche dans <b>Gain</b> et s'ajoute au <b>Solde</b>.</li>
           </ol>
           <table class="rules-table">
@@ -155,7 +169,7 @@
             <tr><td>− / +</td><td>Baisse ou augmente la mise</td></tr>
             <tr><td>Flèches circulaires</td><td>Tours automatiques (reclique pour arrêter)</td></tr>
             <tr><td>Haut-parleur</td><td>Coupe ou remet le son</td></tr>
-            <tr><td>BONUS / SUPER</td><td>Achète un bonus (voir section 8)</td></tr>
+            <tr><td>BONUS · SUPER · MYSTÈRE · EXPANSIF</td><td>Achète un bonus (voir section 8)</td></tr>
           </table>
         </section>
 
@@ -226,11 +240,13 @@
 
         <section id="r-achat">
           <h3><span>8</span> Acheter un bonus</h3>
-          <p>Les boutons à gauche de la grille lancent un bonus tout de suite. Le prix suit ta mise, et une confirmation <b>Oui / Non</b> est demandée avant de payer.</p>
+          <p>Les quatre boutons à gauche de la grille lancent un bonus tout de suite. Le prix suit ta mise, et une confirmation <b>Oui / Non</b> est demandée avant de payer.</p>
           <table class="rules-table">
             <tr><th>Bonus</th><th>Prix</th><th>Contenu</th></tr>
             <tr><td>BONUS<br><small>Eye of the Storm</small></td><td>20× la mise</td><td>6 tours gratuits, 1 Storm Wild collant, départ sous la Pluie</td></tr>
             <tr><td>SUPER<br><small>Super Eye of the Storm</small></td><td>32× la mise</td><td>6 tours gratuits, 1 à 2 Storm Wilds collants, le Gardien frappe à chaque tour</td></tr>
+            <tr><td>MYSTÈRE<br><small>Gain Mystère</small></td><td>50× la mise</td><td>6 tours gratuits, 1 à 2 Storm Wilds ; à chaque tour, 3 à 5 cases cachées se révèlent toutes en un même symbole de valeur</td></tr>
+            <tr><td>EXPANSIF<br><small>Symboles Expansifs</small></td><td>100× la mise</td><td>6 tours gratuits, 1 à 2 Storm Wilds, le Gardien frappe ; à chaque tour, une colonne entière se remplit d'un même symbole de valeur</td></tr>
           </table>
           <p class="hint">Le bonus gagné naturellement (8 tours) est plus grand que les bonus achetés.</p>
         </section>
@@ -238,7 +254,7 @@
         <section id="r-chiffres">
           <h3><span>9</span> Chiffres clés</h3>
           <table class="rules-table">
-            <tr><td>Retour moyen au joueur (RTP)</td><td>≈ 96 % (jeu de base et achats)</td></tr>
+            <tr><td>Retour moyen au joueur (RTP)</td><td>≈ 96 % (jeu de base et chacun des 4 achats)</td></tr>
             <tr><td>Tours gagnants</td><td>environ 1 sur 4</td></tr>
             <tr><td>Bonus naturel</td><td>environ 1 tour sur 240</td></tr>
             <tr><td>Gain maximum</td><td>5 000× la mise par tour</td></tr>

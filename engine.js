@@ -73,6 +73,10 @@
     eye:   { name: 'Eye of the Storm',       cost: 20, spins: 6, wilds: [1, 1], startLevel: 0, dragon: false },
     // 6 tours, 1 à 2 Storm Wilds (26 % de chance d'en avoir 2), Gardien actif : valeur ≈ 30,7× → RTP ≈ 96 % à 32×.
     super: { name: 'Super Eye of the Storm', cost: 32, spins: 6, wilds: [1, 2], wildChance: 0.26, startLevel: 0, dragon: true },
+    // 6 tours, 1 à 2 Wilds ; à chaque tour 3 à 5 cases cachées se révèlent en un même symbole de valeur : ≈ 48× → RTP ≈ 96 % à 50×.
+    mystery: { name: 'Gain Mystère',         cost: 50, spins: 6, wilds: [1, 2], wildChance: 0.24, startLevel: 0, dragon: false, feature: 'mystery', featureCells: [3, 5] },
+    // 6 tours, 1 à 2 Wilds, Gardien ; à chaque tour une colonne entière devient un symbole de valeur : ≈ 96× → RTP ≈ 96 % à 100×.
+    expand:  { name: 'Symboles Expansifs',   cost: 100, spins: 6, wilds: [1, 2], wildChance: 0.06, startLevel: 0, dragon: true, feature: 'expand', featureCells: [1, 1] },
   };
 
   /* ---------- helpers ---------- */
@@ -394,13 +398,42 @@
     }
     push(ctx, { type: 'fill', landed });
     handleLanding(ctx, landed);
+    if (ctx.inBonus && ctx.spinFeature) SPIN_FEATURES[ctx.spinFeature](ctx);
     if (ctx.inBonus && ctx.dragon) dragonStrike(ctx);
     cascadeLoop(ctx);
   }
 
+  // Features that fire at the start of every free spin of some bought bonuses.
+  const SPIN_FEATURES = {
+    // Gain mystère: hidden cells all reveal as the same valuable symbol.
+    mystery(ctx) {
+      const [lo, hi] = ctx.featureCells;
+      const cells = randomCells(ctx, lo + randInt(ctx.rng, hi - lo + 1), (cell) => !isSticky(cell));
+      const sym = pickWeighted([['wolf', 4], ['eagle', 3], ['trident', 2], ['crown', 1]], ctx.rng);
+      for (const [c, r] of cells) ctx.grid[c][r] = { s: sym, life: 0 };
+      push(ctx, { type: 'event', name: 'mystery', cells, sym });
+    },
+    // Symboles expansifs: a valuable symbol grows to fill whole columns.
+    expand(ctx) {
+      const [lo, hi] = ctx.featureCells;
+      const n = lo + randInt(ctx.rng, hi - lo + 1);
+      const sym = pickWeighted([['wolf', 4], ['eagle', 3], ['trident', 2], ['crown', 1]], ctx.rng);
+      const cols = shuffle([...Array(COLS).keys()], ctx.rng).slice(0, n);
+      const cells = [];
+      for (const c of cols) for (let r = 0; r < ROWS; r++) {
+        if (isSticky(ctx.grid[c][r])) continue;
+        ctx.grid[c][r] = { s: sym, life: 0 };
+        cells.push([c, r]);
+      }
+      push(ctx, { type: 'expand', cells, cols, sym });
+    },
+  };
+
   function runBonus(ctx, opts = {}) {
     ctx.inBonus = true;
     ctx.dragon = opts.dragon !== false;
+    ctx.spinFeature = opts.feature || null;
+    ctx.featureCells = opts.featureCells || [1, 1];
     ctx.wildLife = opts.wildLife || CONFIG.wildLife;
     ctx.spinsLeft = opts.spins || CONFIG.freeSpins;
     ctx.charge = 0;

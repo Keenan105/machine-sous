@@ -2,13 +2,13 @@
 /*
  * Mesure le RTP et la volatilité de Stormbound avec le vrai moteur.
  *   node simulate.js [mises=1000000] [graine=1]
- *   node simulate.js --buy eye|super [achats=100000] [graine=1]
+ *   node simulate.js --buy eye|super|mystery|expand [achats=100000] [graine=1]
  */
 'use strict';
 const E = require('./engine.js');
 
 if (process.argv[2] === '--buy') {
-  // node simulate.js --buy eye|super [achats] [graine]
+  // node simulate.js --buy eye|super|mystery|expand [achats] [graine]
   const kind = process.argv[3];
   const N = +(process.argv[4] || 100000);
   const r = E.mulberry32(+(process.argv[5] || 1));
