@@ -176,7 +176,7 @@ section, #msg, details {
   border-color: #7fd3ff;
   box-shadow: 0 0 14px rgba(127, 211, 255, 0.6), inset 0 0 12px rgba(127, 211, 255, 0.4);
 }
-.cell.sticky .sym { animation: spinSym 3s linear infinite; }
+.cell.sticky .sym { animation: spinSym 3s linear infinite; transform-origin: 50% 50%; }
 .cell.sticky::after {
   content: attr(data-life);
   position: absolute;
@@ -194,7 +194,7 @@ section, #msg, details {
 .cell.fall .sym { animation: fall 0.32s ease-in both; animation-delay: var(--d, 0ms); }
 .cell.slide .sym { animation: slide 0.4s ease-out both; }
 .cell.win { animation: winPulse 0.7s ease-in-out; z-index: 3; }
-.cell.win .sym { animation: winSym 0.7s ease-in-out; }
+.cell.win .sym { animation: winSym 0.7s ease-in-out; transform-origin: 50% 50%; }
 .cell.absorb .sym { animation: absorb 0.45s ease-in forwards; }
 .cell.struck { animation: struck 0.6s ease-out; }
 .cell.hidden .sym { animation: mystery 0.5s linear infinite; }
@@ -443,8 +443,13 @@ body[data-level="4"] h1 { background: linear-gradient(180deg, #fff 10%, #ff9fb3 
 body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0 36px rgba(127, 211, 255, 0.3); }
 
 /* column-by-column drop: symbols never fade, they fall through the board */
-#board { overflow: clip; overflow-clip-margin: 6px; }
-.cell .sym { position: relative; z-index: 2; }
+#board { overflow: clip; overflow-clip-margin: 8px; }
+.cell .sym {
+  position: relative;
+  z-index: 2;
+  transform-origin: 50% 90%;
+  backface-visibility: hidden;
+}
 .cell .sym.old {
   position: absolute;
   inset: 0;
@@ -453,12 +458,27 @@ body.bonus #boardWrap { border-color: rgba(127, 211, 255, 0.55); box-shadow: 0 0
   justify-content: center;
   visibility: hidden;
 }
-.cell.leaving .sym.old { visibility: visible; animation: colOut var(--fall, 260ms) cubic-bezier(.55, 0, 1, .45) forwards; }
-.cell.land .sym:not(.old) { animation: colIn var(--dur, 380ms) linear both; }
-@keyframes colOut { from { transform: translateY(0); } to { transform: translateY(var(--to, 500px)); } }
+.cell.land .sym, .cell.leaving .sym.old { will-change: transform; }
+.cell.leaving .sym.old {
+  visibility: visible;
+  animation: colOut var(--fall, 190ms) cubic-bezier(.5, 0, .9, .5) forwards;
+}
+.cell.land .sym:not(.old) { animation: colIn var(--dur, 380ms) linear both; animation-delay: var(--d, 0ms); }
+
+@keyframes colOut {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, var(--to, 500px), 0) scale(0.94, 1.08); }
+}
+/* fall (accelerating, slightly stretched) → squash on impact → rebound → small second bounce → settle */
 @keyframes colIn {
-  0% { transform: translateY(var(--from, -500px)); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
-  68% { transform: translateY(0); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
-  84% { transform: translateY(var(--bounce, -6px)); animation-timing-function: cubic-bezier(.6, 0, .8, .4); }
-  100% { transform: translateY(0); }
+  0%   { transform: translate3d(0, var(--from, -500px), 0) scale(0.94, 1.08); animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  50%  { transform: translate3d(0, 0, 0) scale(1.14, 0.84); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  68%  { transform: translate3d(0, var(--bounce, -8px), 0) scale(0.95, 1.06); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
+  80%  { transform: translate3d(0, 0, 0) scale(1.06, 0.94); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  90%  { transform: translate3d(0, var(--bounce2, -2px), 0) scale(0.99, 1.01); animation-timing-function: ease-in-out; }
+  100% { transform: translate3d(0, 0, 0) scale(1, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell.land .sym:not(.old) { animation-duration: 1ms; animation-delay: 0ms; }
+  .cell.leaving .sym.old { animation-duration: 1ms; }
 }

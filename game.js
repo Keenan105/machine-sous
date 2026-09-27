@@ -183,9 +183,10 @@ function showLevel(level, intensity, announce) {
 
 /* ------------------------- column-by-column drop ------------------------- */
 
-const FALL_MS = 260;         // chute d'une colonne au tour de base (ms)
-const CASCADE_FALL_MS = 200; // chute d'une colonne pendant les cascades
-const LAND_SHARE = 0.68;     // part de l'animation consacrée à la chute, le reste est le rebond
+const FALL_MS = 190;         // chute d'une colonne au tour de base (ms)
+const CASCADE_FALL_MS = 150; // chute d'une colonne pendant les cascades
+const LAND_SHARE = 0.5;      // part de l'animation consacrée à la chute, le reste est le rebond
+const ROW_LAG = 20;          // dans une colonne, chaque rangée se pose un peu après celle du dessous (ms)
 
 // Distance en pixels entre deux rangées de la grille.
 function rowPitch() {
@@ -193,14 +194,16 @@ function rowPitch() {
 }
 
 // Anime une colonne : les anciens symboles sortent par le bas, les nouveaux tombent et rebondissent.
-function animateColumn(c, items, fallMs) {
+function animateColumn(c, items, fallMs, lag = ROW_LAG) {
   const P = rowPitch();
   const total = Math.round(fallMs / LAND_SHARE);
   for (const it of items) {
     paintCell(it.c, it.r);
     const el = cellEl(it.c, it.r);
     el.style.setProperty('--from', it.from * P + 'px');
-    el.style.setProperty('--bounce', -Math.max(4, P * 0.1) + 'px');
+    el.style.setProperty('--bounce', -Math.max(5, P * 0.14) + 'px');
+    el.style.setProperty('--bounce2', -Math.max(2, P * 0.04) + 'px');
+    el.style.setProperty('--d', (ROWS - 1 - it.r) * lag + 'ms');
     el.style.setProperty('--dur', total + 'ms');
     el.style.setProperty('--fall', fallMs + 'ms');
     if (it.old) {
@@ -231,7 +234,7 @@ async function dropColumns(step) {
     await sleep(FALL_MS);
   }
   grid = next;
-  await sleep(Math.round(FALL_MS / LAND_SHARE) - FALL_MS);
+  await sleep(Math.round(FALL_MS / LAND_SHARE) - FALL_MS + (ROWS - 1) * ROW_LAG);
 }
 
 // Cascade : les symboles restants glissent vers le bas, les nouveaux tombent du haut, colonne par colonne.
@@ -248,10 +251,10 @@ async function refillColumns(step) {
   const cols = [...byCol.keys()].sort((a, b) => a - b);
   for (const c of cols) {
     for (let r = 0; r < ROWS; r++) if (!byCol.get(c).some((it) => it.r === r)) paintCell(c, r);
-    animateColumn(c, byCol.get(c), CASCADE_FALL_MS);
+    animateColumn(c, byCol.get(c), CASCADE_FALL_MS, 14);
     await sleep(CASCADE_FALL_MS);
   }
-  await sleep(Math.round(CASCADE_FALL_MS / LAND_SHARE) - CASCADE_FALL_MS + 60);
+  await sleep(Math.round(CASCADE_FALL_MS / LAND_SHARE) - CASCADE_FALL_MS + (ROWS - 1) * 14);
 }
 
 /* ------------------------- replay of engine steps ------------------------- */
