@@ -1315,3 +1315,6 @@ h1 { font-size: clamp(26px, 7vw, 40px); }
 
 #spin.busy .spin-img { filter: grayscale(0.6) brightness(0.75); }
 #spin.busy { cursor: default; }
+/* bonus buttons show just the price */
+.buy-btn .buy-price { font-size: 13px; letter-spacing: 0.06em; }
+@media (min-width: 1240px) { .buy-btn .buy-price { font-size: 14px; } }
