@@ -1011,9 +1011,15 @@ function makeCloudSheet(w, h, o) {
       const i = y * w + x;
       const d = dens[i];
       if (d <= 0.001) { px[i * 4 + 3] = 0; continue; }
-      const above = y >= off ? dens[i - off * w] : 0;
-      const shade = Math.max(0, Math.min(1, 0.95 - above * 0.75 + (d - above) * 0.35));
-      const lum = 38 + 200 * shade * (0.75 + 0.25 * (1 - y / h));
+      // light comes from the moon, up and to the right: sample the density towards it
+      const lx = (x + off) % w, ly = y - off;
+      const toward = ly >= 0 ? dens[ly * w + lx] : 0;
+      const toward2 = ly - off >= 0 ? dens[(ly - off) * w + (lx + off) % w] : 0;
+      const occl = toward * 0.6 + toward2 * 0.4;
+      let shade = 0.98 - occl * 0.8 + (d - toward) * 0.3;
+      if (d < 0.35 && occl < 0.15) shade += (0.35 - d) * 1.6;          // silver lining on thin edges
+      shade = Math.max(0, Math.min(1.25, shade));
+      const lum = Math.min(255, 30 + 205 * shade * (0.7 + 0.3 * (1 - y / h)));
       px[i * 4] = lum * 0.92;
       px[i * 4 + 1] = lum * 0.95;
       px[i * 4 + 2] = Math.min(255, lum * 1.04);
@@ -1229,6 +1235,62 @@ function makeTree(x, h, kind) {
 
 let cloudSheets = [], pineSprites = [], deadSprites = [], fogSprite = null, vignettes = [];
 let BG_DPR = 1;
+let moonSprites = [], grainPattern = null, frontSprites = [];
+
+// A full moon with maria, craters and limb darkening, pre-rendered once.
+function makeMoonSprite(r, red) {
+  const s = Math.ceil(r * 2 + 4);
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const g = c.getContext('2d');
+  const img = g.createImageData(s, s);
+  const d = img.data;
+  const cx = s / 2, cy = s / 2;
+  for (let y = 0; y < s; y++) {
+    for (let x = 0; x < s; x++) {
+      const dx = (x - cx) / r, dy = (y - cy) / r, rr = dx * dx + dy * dy;
+      if (rr > 1) continue;
+      const limb = Math.pow(1 - rr, 0.28);                           // darker towards the edge
+      const maria = fbm(dx * 1.6 + 3, dy * 1.6 + 7, 4);               // the dark "seas"
+      const crater = Math.abs(perlin(dx * 7 + 11, dy * 7 + 5));       // small crater rims
+      let v = 0.92 - Math.max(0, maria) * 0.55 - (crater < 0.06 ? 0.08 : 0) + perlin(dx * 22, dy * 22) * 0.04;
+      v = Math.max(0.3, Math.min(1, v)) * limb;
+      const i = (y * s + x) * 4;
+      const edge = Math.min(1, (1 - Math.sqrt(rr)) * r * 0.8);        // anti-aliased rim
+      if (red) { d[i] = 250 * v; d[i + 1] = 95 * v; d[i + 2] = 85 * v; }
+      else { d[i] = 236 * v; d[i + 1] = 240 * v; d[i + 2] = 250 * v; }
+      d[i + 3] = 255 * edge;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+// Fine film grain, tiled over the scenery.
+function makeGrain() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 160;
+  const g = c.getContext('2d');
+  const img = g.createImageData(160, 160);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 128 + (Math.random() - 0.5) * 90;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+// Blurred copy of a sprite: foreground trees sit out of focus.
+function blurredCopy(src, px) {
+  const c = document.createElement('canvas');
+  c.width = src.width + px * 4;
+  c.height = src.height + px * 4;
+  const g = c.getContext('2d');
+  g.filter = `blur(${px}px)`;
+  g.drawImage(src, px * 2, px * 2);
+  return c;
+}
 
 function resize() {
   DPR = Math.min(1.75, window.devicePixelRatio || 1);
@@ -1243,11 +1305,11 @@ function resize() {
   cloudLayer.width = Math.ceil(W * 0.75);
   cloudLayer.height = Math.ceil(H * 0.75);
 
-  const cw = Math.ceil(Math.max(W, 900) * 0.5);
+  const cw = Math.ceil(Math.max(W, 900) * 0.62);
   cloudSheets = [
     { c: makeCloudSheet(cw, Math.ceil(H * 0.26), { cells: 7, seed: 3.1, cover: 0.44, alpha: 0.95, top: 0.05, bottom: 0.55, squash: 1.9 }), y: -0.02, hk: 0.52, v: 0.18, par: 4 },
     { c: makeCloudSheet(cw, Math.ceil(H * 0.24), { cells: 5, seed: 9.7, cover: 0.5, alpha: 1, top: 0.12, bottom: 0.5, squash: 1.6 }), y: 0.04, hk: 0.48, v: 0.4, par: 9 },
-    { c: makeCloudSheet(cw, Math.ceil(H * 0.14), { cells: 4, seed: 21.3, cover: 0.58, alpha: 0.9, top: 0.2, bottom: 0.55, squash: 1.4 }), y: 0.33, hk: 0.28, v: 0.9, par: 14 },
+    { c: makeCloudSheet(cw, Math.ceil(H * 0.14), { cells: 4, seed: 21.3, cover: 0.6, alpha: 0.75, top: 0.4, bottom: 0.6, squash: 1.4 }), y: 0.33, hk: 0.28, v: 0.9, par: 14 },
   ];
   cloudSheets.forEach((sh) => (sh.x = rnd(0, 1000)));
 
@@ -1261,6 +1323,7 @@ function resize() {
 
   if (!pineSprites.length) {
     pineSprites = [0, 1, 2, 3, 4, 5].map(() => makePineSprite(Math.round(rnd(150, 200))));
+    frontSprites = pineSprites.map((sp) => blurredCopy(sp, 1.6));
     deadSprites = [0, 1].map(() => makeDeadTreeSprite(180));
     fogSprite = makeFogSprite();
   }
@@ -1273,6 +1336,7 @@ function resize() {
   const nf = Math.max(8, Math.round(W / 70));
   for (let i = 0; i < nf; i++) treesFront.push(makeTree((i + rnd(0, 0.8)) * (W / nf), rnd(90, 190), Math.random() < 0.12 ? 'dead' : 'pine'));
   treesFront.sort((a, b) => a.h - b.h);
+  treesFront.forEach((tr) => (tr.front = true));
 
   grass = [];
   for (let x = 0; x < W; x += REDUCED ? 7 : 3.5) grass.push({ x: x + rnd(-1, 1), h: rnd(8, 22), p: rnd(0, 6) });
@@ -1290,6 +1354,9 @@ function resize() {
     return g;
   });
   scene.glows = [];
+  const mr = Math.max(22, Math.min(W, H) * 0.045);
+  moonSprites = [makeMoonSprite(mr, false), makeMoonSprite(mr, true)];
+  if (!grainPattern) grainPattern = bctx.createPattern(makeGrain(), 'repeat');
 }
 
 let resizeTimer = 0;
@@ -1330,16 +1397,13 @@ function drawSky(lvl) {
     halo.addColorStop(1, 'rgba(0,0,0,0)');
     bctx.fillStyle = halo;
     bctx.fillRect(mx - mr * 5, my - mr * 5, mr * 10, mr * 10);
-    bctx.fillStyle = red ? `rgba(230,70,70,${scene.moon})` : `rgba(232,238,250,${scene.moon})`;
-    bctx.beginPath();
-    bctx.arc(mx, my, mr, 0, Math.PI * 2);
-    bctx.fill();
-    bctx.fillStyle = `rgba(0,0,0,${0.12 * scene.moon})`;
-    for (const [dx, dy, r] of [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.16], [-0.05, 0.35, 0.12]]) {
-      bctx.beginPath();
-      bctx.arc(mx + dx * mr, my + dy * mr, r * mr, 0, Math.PI * 2);
-      bctx.fill();
+    const spr = moonSprites[red ? 1 : 0];
+    if (spr) {
+      bctx.globalAlpha = scene.moon;
+      bctx.drawImage(spr, mx - spr.width / 2, my - spr.height / 2);
+      bctx.globalAlpha = 1;
     }
+    scene.moonPos = { x: mx, y: my, r: mr };
   }
 }
 
@@ -1543,7 +1607,7 @@ function drawTornado(lvl) {
 
 function drawTree(tr, baseY, scale, alpha) {
   const sway = Math.sin(t * (0.9 + wind * 2.4) * tr.w + tr.p) * (0.01 + wind * 0.045) + wind * 0.05;
-  const spr = tr.kind === 'dead' ? deadSprites[tr.sp] : pineSprites[tr.sp];
+  const spr = tr.kind === 'dead' ? deadSprites[tr.sp] : (tr.front ? frontSprites[tr.sp] : pineSprites[tr.sp]);
   const h = tr.h * scale, w = h * spr.width / spr.height;
   bctx.save();
   bctx.translate(tr.x, baseY);
@@ -1817,6 +1881,91 @@ function drawRain(lvl) {
   }
 }
 
+// Shafts of moonlight falling through gaps in the clouds.
+function drawMoonRays(lvl) {
+  const m = scene.moonPos;
+  if (!m || scene.moon < 0.1 || REDUCED) return;
+  bctx.save();
+  bctx.globalCompositeOperation = 'lighter';
+  const red = lvl === 4;
+  for (let i = 0; i < 4; i++) {
+    const ang = Math.PI * 0.6 + (i - 1.5) * 0.16 + Math.sin(t * 0.05 + i) * 0.03;
+    const len = H * 0.85;
+    const wv = 0.07 + 0.03 * Math.sin(t * 0.3 + i * 1.7);
+    const a = scene.moon * (0.012 + 0.012 * Math.max(0, Math.sin(t * 0.21 + i * 2.1)));
+    const g = bctx.createLinearGradient(m.x, m.y, m.x + Math.cos(ang) * len, m.y + Math.sin(ang) * len);
+    g.addColorStop(0, red ? `rgba(255,120,130,${a})` : `rgba(200,220,255,${a})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    bctx.fillStyle = g;
+    bctx.beginPath();
+    bctx.moveTo(m.x, m.y);
+    bctx.lineTo(m.x + Math.cos(ang - wv) * len, m.y + Math.sin(ang - wv) * len);
+    bctx.lineTo(m.x + Math.cos(ang + wv) * len, m.y + Math.sin(ang + wv) * len);
+    bctx.closePath();
+    bctx.fill();
+  }
+  bctx.restore();
+}
+
+// A still lake in the valley that mirrors the sky and mountains, rippled by wind and rain.
+function drawLake(lvl) {
+  const wl = Math.round(H * 0.8), bottom = GROUND + 12, depth = bottom - wl;
+  if (depth < 12) return;
+  const k = BG_DPR, strip = 2;
+  const amp = 0.6 + wind * 2.2;
+  for (let y = 0; y < depth; y += strip) {
+    const srcY = wl - y * 0.9 - strip;                       // slightly compressed, like a real reflection
+    if (srcY < 0) break;
+    const f = y / depth;
+    const off = (Math.sin(y * 0.45 - t * 2.4) + 0.6 * Math.sin(y * 0.13 + t * 1.3)) * amp * (1 + f * 4);
+    bctx.drawImage(bg, 0, srcY * k, W * k, strip * k, off - 6, wl + y, W + 12, strip);
+  }
+  // water colour: darker and bluer with depth, brighter in a flash
+  const g = bctx.createLinearGradient(0, wl, 0, bottom);
+  g.addColorStop(0, rgb(mix(sky[2], [10, 16, 28], 0.4), 0.35 - scene.flash * 0.15));
+  g.addColorStop(1, rgb(mix(sky[1], [2, 4, 10], 0.75), 0.8));
+  bctx.fillStyle = g;
+  bctx.fillRect(0, wl, W, depth);
+  // moon glade: a shimmering path of light on the water
+  const m = scene.moonPos;
+  if (m && scene.moon > 0.1) {
+    bctx.save();
+    bctx.globalCompositeOperation = 'lighter';
+    for (let y = 2; y < depth; y += 3) {
+      const f = y / depth;
+      const w = m.r * (0.6 + f * 2.6) * (0.5 + 0.5 * Math.abs(Math.sin(y * 0.7 + t * 3)));
+      const a = scene.moon * 0.22 * (1 - f * 0.5) * (0.4 + 0.6 * Math.abs(Math.sin(y * 1.3 - t * 4)));
+      bctx.fillStyle = lvl === 4 ? `rgba(255,120,120,${a})` : `rgba(220,232,255,${a})`;
+      bctx.fillRect(m.x - w / 2 + Math.sin(y * 0.5 + t * 2) * 3, wl + y, w, 1.2);
+    }
+    bctx.restore();
+  }
+  // shoreline
+  bctx.fillStyle = `rgba(200,215,240,${0.1 + scene.flash * 0.3})`;
+  bctx.fillRect(0, wl, W, 1);
+  // rain rings on the lake
+  if (!fx.hush && Math.random() < 0.3 + lvl * 0.25) ripples.push({ x: rnd(0, W), y: rnd(wl + 3, bottom - 2), r: 1, life: 1 });
+}
+
+// Colour grade and film grain: softens the procedural look.
+function drawGrade(lvl) {
+  if (!grainPattern) return;
+  bctx.save();
+  bctx.globalCompositeOperation = 'overlay';
+  bctx.globalAlpha = 0.07;
+  bctx.fillStyle = grainPattern;
+  const ox = Math.floor(Math.random() * 160), oy = Math.floor(Math.random() * 160);
+  bctx.translate(-ox, -oy);
+  bctx.fillRect(0, 0, W + 160, H + 160);
+  bctx.restore();
+  // cool shadows, a touch of teal in the midtones
+  bctx.save();
+  bctx.globalCompositeOperation = 'soft-light';
+  bctx.fillStyle = lvl === 4 ? 'rgba(90,20,45,0.14)' : 'rgba(40,70,110,0.22)';
+  bctx.fillRect(0, 0, W, H);
+  bctx.restore();
+}
+
 function drawVignette(lvl) {
   bctx.fillStyle = vignettes[lvl];
   bctx.fillRect(0, 0, W, H);
@@ -1839,8 +1988,10 @@ function drawBackground() {
   for (const b of scene.bolts) drawBolt(bctx, b, lvl);
   scene.bolts = scene.bolts.filter((b) => b.life > 0);
   drawClouds(1, lvl);
+  drawMoonRays(lvl);
   drawBirds(lvl);
   drawRanges(lvl);
+  drawLake(lvl);
   drawFog(lvl);
   drawGround(lvl);
   drawForeground(lvl);
@@ -1856,6 +2007,7 @@ function drawBackground() {
     bctx.fillStyle = rg;
     bctx.fillRect(0, 0, W, H);
   }
+  drawGrade(lvl);
   drawVignette(lvl);
   scene.flash *= 0.9;
   if (scene.flash < 0.01) scene.flash = 0;
