@@ -2444,7 +2444,7 @@ $('#sound').addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (!$('#rulesModal').hidden) { if (e.code === 'Escape') closeRules(); return; }
   if (!$('#buyModal').hidden) { if (e.code === 'Escape') { if (pendingKind) showOffers(); else closeBuy(); } return; }
-  if ((e.code === 'KeyT' || e.code === 'Space') && !e.repeat && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SUMMARY') { e.preventDefault(); spin(); }
+  if (e.code === 'Space' && !e.repeat && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SUMMARY') { e.preventDefault(); spin(); }
 });
 
 buildPaytable();
