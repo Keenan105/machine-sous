@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stormbound — La Tempête des Anciens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;900&family=Inter:wght@400;600;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-level="0">
+  <canvas id="bg"></canvas>
+
+  <div id="app">
+    <header>
+      <h1>STORMBOUND</h1>
+      <div class="sub">La Tempête des Anciens</div>
+    </header>
+
+    <section id="weather" aria-label="Niveau de tempête">
+      <div class="steps">
+        <div class="step" data-l="0"><span>🌧️</span><small>Pluie</small></div>
+        <div class="step" data-l="1"><span>💨</span><small>Vent</small></div>
+        <div class="step" data-l="2"><span>⚡</span><small>Orage</small></div>
+        <div class="step" data-l="3"><span>🌪️</span><small>Supercellule</small></div>
+        <div class="step" data-l="4"><span>🌩️</span><small>Stormbound</small></div>
+      </div>
+      <div class="intensity"><div class="bar"></div></div>
+      <div class="mult">Multiplicateur météo <b id="mult">×1</b></div>
+    </section>
+
+    <section id="gauge" aria-label="Storm Charge">
+      <div class="label">⚡ Storm Charge <b id="chargeVal">0</b>/100</div>
+      <div class="track">
+        <div class="fill"></div>
+        <i style="left:25%"></i><i style="left:50%"></i><i style="left:75%"></i>
+        <em class="eye-mark">🌀</em>
+      </div>
+    </section>
+
+    <section id="boardWrap">
+      <div id="dragon" aria-hidden="true">🐉</div>
+      <div id="zoneLayer" aria-hidden="true">
+        <div class="zone" data-z="0"></div><div class="zone" data-z="1"></div><div class="zone" data-z="2"></div>
+      </div>
+      <div id="board"></div>
+      <div id="eye" aria-hidden="true"></div>
+      <div id="banner"></div>
+    </section>
+
+    <section id="zones" aria-label="Frappes du Gardien">
+      <div class="zinfo" data-z="0"><span>Zone I</span><i></i><i></i><i></i></div>
+      <div class="zinfo" data-z="1"><span>Zone II</span><i></i><i></i><i></i></div>
+      <div class="zinfo" data-z="2"><span>Zone III</span><i></i><i></i><i></i></div>
+      <div id="dragonStatus">Gardien endormi</div>
+    </section>
+
+    <section id="controls">
+      <div class="stat"><small>Solde</small><b id="balance">1000</b></div>
+      <div class="bet">
+        <button id="betDown" aria-label="Baisser la mise">−</button>
+        <div class="stat"><small>Mise</small><b id="bet">1</b></div>
+        <button id="betUp" aria-label="Augmenter la mise">+</button>
+      </div>
+      <button id="spin">SPIN</button>
+      <div class="stat"><small>Gain</small><b id="win">0</b></div>
+      <div class="toggles">
+        <button id="auto" title="Auto-spin">AUTO</button>
+        <button id="sound" title="Son">🔊</button>
+      </div>
+    </section>
+
+    <div id="msg">Appuie sur SPIN (ou Espace) pour réveiller la tempête.</div>
+
+    <details id="rules">
+      <summary>Règles &amp; table des gains</summary>
+      <div id="paytable"></div>
+      <ul class="rules">
+        <li><b>Gains partout :</b> 8 symboles identiques ou plus, n'importe où sur la grille 6×5. Les symboles gagnants explosent et d'autres tombent en cascade.</li>
+        <li><b>Météo :</b> chaque cascade renforce la tempête (Pluie → Vent → Orage → Supercellule → Stormbound) et augmente le multiplicateur. Un tour sans gain la calme un peu.</li>
+        <li><b>Storm Charge :</b> chaque ⚡ ajoute 7 de charge et chaque cascade en ajoute 3. À 25, 50 et 75, un événement aléatoire se produit : Éclair, Rafale, Pluie torrentielle ou Œil du cyclone.</li>
+        <li><b>Eye of the Storm :</b> à 100, silence… puis BOOM. L'œil du cyclone pose des Storm Wilds 🌀 qui restent en place pendant 3 cascades (chaque cascade gagnante ou nouveau tour use une charge).</li>
+        <li><b>Le Gardien 🐉 :</b> il apparaît pendant 5 tours et frappe une zone à chaque éclair. Au bout de 3 frappes au même endroit, la zone devient une <i>zone de tempête</i> : plus de ⚡, plus de symboles premium, et des Wilds.</li>
+      </ul>
+      <p class="note">Prototype de démonstration : crédits fictifs, aucun argent réel.</p>
+    </details>
+  </div>
+
+  <canvas id="fx"></canvas>
+  <script src="game.js"></script>
+</body>
+</html>
