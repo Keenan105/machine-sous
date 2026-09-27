@@ -1437,3 +1437,34 @@ h1 { font-size: clamp(24px, 6vw, 34px); }
   .slot small { font-size: 9px; top: calc(100% + 3px); }
   .charge-goal { width: 58px; }
 }
+
+/* even larger side column where the screen allows it */
+@media (min-width: 1240px) {
+  #sidePanel { width: 370px; }
+  .step .medal { width: 58px; height: 58px; }
+  .groove { top: 35px; height: 8px; }
+  .step small { font-size: 11.5px; }
+  .step em { font-size: 12px; }
+  .mult { font-size: 14px; }
+  .slot { height: 36px; }
+  .slot svg { width: 24px; height: 24px; }
+  .charge-head { font-size: 13.5px; }
+  .charge-head b { font-size: 15px; }
+  .charge-goal { width: 64px; }
+}
+@media (min-width: 1400px) {
+  #sidePanel { width: 440px; }
+  .step .medal { width: 68px; height: 68px; }
+  .groove { top: 40px; height: 9px; }
+  .step small { font-size: 13px; }
+  .step em { font-size: 13px; }
+  .mult { font-size: 15px; }
+  #weather { padding: 14px 14px 12px; }
+  #gauge { padding: 12px 14px 26px; }
+  .slot { height: 42px; }
+  .slot svg { width: 28px; height: 28px; }
+  .slot small { font-size: 10.5px; }
+  .charge-head { font-size: 15px; }
+  .charge-head b { font-size: 17px; }
+  .charge-goal { width: 78px; }
+}
