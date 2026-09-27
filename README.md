@@ -3,7 +3,7 @@
 Prototype jouable d'une machine à sous au thème de tempête fantastique (HTML/CSS/JS, sans dépendance).
 
 **Lancer :** ouvrir `index.html` dans un navigateur, puis cliquer sur SPIN (ou appuyer sur Espace).
-**Tester le bonus :** dans la console du navigateur, `stormbound.bonus()`.
+**Tester le bonus :** bouton BONUS, ou `stormbound.bonus()` dans la console du navigateur.
 
 ## Architecture
 - `engine.js` : moteur mathématique sans affichage. `spin(mise, rng)` calcule le résultat complet d'une mise (tour de base, cascades, événements et tours gratuits) et renvoie la liste des étapes. **Chaque mise est indépendante**, aucun état ne passe d'une mise à l'autre.
@@ -18,6 +18,14 @@ Prototype jouable d'une machine à sous au thème de tempête fantastique (HTML/
 | Répartition du RTP | ≈ 58 % jeu de base, ≈ 38 % bonus |
 | Eye of the Storm | ≈ 1 mise sur 240, gain moyen ≈ ×90 |
 | Gain max | plafonné à ×5000 la mise |
+
+### Achat de bonus (bouton BONUS)
+| Achat | Prix | RTP (simulation 120 000 achats) |
+|---|---|---|
+| Eye of the Storm : 2–3 Storm Wilds, départ au Vent | 88× la mise | ≈ 96,2 % |
+| Super Eye of the Storm : 4–5 Storm Wilds, départ à l'Orage ×2 | 141× la mise | ≈ 95,9 % |
+
+Mesure : `node simulate.js --buy eye 100000`. Les prix sont dans `BONUS_BUYS` (engine.js). Attention, l'achat de bonus est interdit dans certains pays (Royaume-Uni par exemple) : à vérifier selon le casino.
 
 `payScale` multiplie toute la table des gains, et le RTP lui est proportionnel : c'est le bouton pour recaler le RTP.
 

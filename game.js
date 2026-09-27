@@ -98,6 +98,7 @@ function updateUI() {
   $('#bet').textContent = fmt(bet());
   $('#win').textContent = fmt(state.spinWin);
   $('#spin').disabled = state.busy;
+  $('#buyBtn').disabled = state.busy;
   $('#auto').classList.toggle('on', state.auto);
 }
 
@@ -511,6 +512,14 @@ async function play(step) {
       await sleep(500);
       break;
 
+    case 'buy': {
+      const all = [];
+      for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) all.push([c, r]);
+      await dropColumns({ grid: step.grid, landed: all });
+      await banner(step.kind === 'super' ? '🌩️ SUPER BONUS ACHETÉ' : '🌀 BONUS ACHETÉ', 1200);
+      break;
+    }
+
     case 'bonusStart':
       await eyeOfTheStorm(step);
       break;
@@ -598,21 +607,15 @@ async function runResult(result) {
   for (const step of result.steps) await play(step);
 }
 
-async function spin(forced) {
-  if (state.busy) return;
-  if (state.balance < bet() - 1e-9) {
-    say('Solde insuffisant : baisse la mise.');
-    state.auto = false;
-    updateUI();
-    return;
-  }
+// Pays `cost`, then replays the engine result.
+async function playPaid(cost, makeResult) {
   audio.init();
   state.busy = true;
-  state.balance -= bet();
+  state.balance -= cost;
   state.spinWin = 0;
   updateUI();
 
-  const result = forced || StormEngine.spin(bet(), rng);
+  const result = makeResult();
   await runResult(result);
 
   if (result.win === 0) {
@@ -625,6 +628,60 @@ async function spin(forced) {
   state.busy = false;
   updateUI();
   if (state.auto) setTimeout(() => spin(), 700);
+}
+
+async function spin(forced) {
+  if (state.busy) return;
+  if (state.balance < bet() - 1e-9) {
+    say('Solde insuffisant : baisse la mise.');
+    state.auto = false;
+    updateUI();
+    return;
+  }
+  await playPaid(bet(), () => forced || StormEngine.spin(bet(), rng));
+}
+
+/* ------------------------- bonus buy ------------------------- */
+
+const BUY_INFO = {
+  eye: { icon: 'wild', lines: ['8 tours gratuits', '2 à 3 Storm Wilds collants', 'Départ au Vent ×1,5', 'Le Gardien frappe à chaque tour'] },
+  super: { icon: 'dragon', lines: ['8 tours gratuits', '4 à 5 Storm Wilds collants', 'Départ à l\'Orage ×2', 'Le Gardien frappe à chaque tour'] },
+};
+
+function renderOffers() {
+  $('#buyBet').textContent = fmt(bet());
+  $('#offers').innerHTML = Object.entries(StormEngine.BONUS_BUYS).map(([kind, o]) => {
+    const price = o.cost * bet();
+    const info = BUY_INFO[kind];
+    const short = state.balance < price - 1e-9;
+    return `<div class="offer offer-${kind}">
+      <div class="offer-art">${symbolSVG(info.icon)}</div>
+      <h3>${o.name}</h3>
+      <ul>${info.lines.map((l) => `<li>${l}</li>`).join('')}</ul>
+      <button class="offer-buy" data-kind="${kind}" ${short ? 'disabled' : ''}>
+        Acheter · ${fmt(price)}<small>${o.cost}× la mise${short ? ' · solde insuffisant' : ''}</small>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function openBuy() {
+  if (state.busy) return;
+  state.auto = false;
+  updateUI();
+  renderOffers();
+  $('#buyModal').hidden = false;
+  $('#buyClose').focus();
+}
+
+function closeBuy() { $('#buyModal').hidden = true; }
+
+async function buyBonus(kind) {
+  const offer = StormEngine.BONUS_BUYS[kind];
+  const price = offer.cost * bet();
+  if (state.busy || state.balance < price - 1e-9) return;
+  closeBuy();
+  await playPaid(price, () => StormEngine.buyBonus(kind, bet(), rng));
 }
 
 /* ------------------------- weather renderer ------------------------- */
@@ -1543,7 +1600,7 @@ const audio = {
     };
     this.rain = loop('highpass', 1400);
     this.wind = loop('bandpass', 450, 1.4);
-    this.rumble = loop('lowpass', 80);
+    this.rumbleBed = loop('lowpass', 80);
     this.lfo = ctx.createOscillator();
     this.lfo.frequency.value = 0.15;
     const lg = ctx.createGain();
@@ -1557,7 +1614,7 @@ const audio = {
     const now = this.ctx.currentTime;
     this.rain.g.gain.setTargetAtTime([0.05, 0.08, 0.1, 0.12, 0.15][l], now, 0.8);
     this.wind.g.gain.setTargetAtTime([0, 0.3, 0.45, 0.65, 0.9][l], now, 1.2);
-    this.rumble.g.gain.setTargetAtTime([0, 0, 0.3, 0.7, 1.1][l], now, 1.2);
+    this.rumbleBed.g.gain.setTargetAtTime([0, 0, 0.3, 0.7, 1.1][l], now, 1.2);
     this.lfo.frequency.setTargetAtTime(0.12 + l * 0.12, now, 1);
   },
   env(node, peak, attack, decay, when = 0) {
@@ -1669,8 +1726,16 @@ $('#spin').addEventListener('click', () => spin());
 $('#betUp').addEventListener('click', () => { if (!state.busy) { state.betIdx = Math.min(BETS.length - 1, state.betIdx + 1); updateUI(); } });
 $('#betDown').addEventListener('click', () => { if (!state.busy) { state.betIdx = Math.max(0, state.betIdx - 1); updateUI(); } });
 $('#auto').addEventListener('click', () => { state.auto = !state.auto; updateUI(); if (state.auto) spin(); });
+$('#buyBtn').addEventListener('click', openBuy);
+$('#buyClose').addEventListener('click', closeBuy);
+$('#buyModal').addEventListener('click', (e) => {
+  if (e.target.id === 'buyModal') closeBuy();
+  const btn = e.target.closest('.offer-buy');
+  if (btn && !btn.disabled) buyBonus(btn.dataset.kind);
+});
 $('#sound').addEventListener('click', (e) => { audio.init(); e.currentTarget.textContent = audio.toggle() ? '🔊' : '🔇'; });
 document.addEventListener('keydown', (e) => {
+  if (!$('#buyModal').hidden) { if (e.code === 'Escape') closeBuy(); return; }
   if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SUMMARY') { e.preventDefault(); spin(); }
 });
 

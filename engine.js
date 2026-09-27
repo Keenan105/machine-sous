@@ -67,6 +67,12 @@
     { name: 'STORMBOUND',   icon: '🌩️', need: 11, mult: 5 },
   ];
 
+  // Achats de bonus : prix en multiples de la mise, calés par simulation (simulate.js --buy).
+  const BONUS_BUYS = {
+    eye:   { name: 'Eye of the Storm',       cost: 88,  wilds: [2, 3], startLevel: 1 },
+    super: { name: 'Super Eye of the Storm', cost: 141, wilds: [4, 5], startLevel: 2 },
+  };
+
   /* ---------- helpers ---------- */
 
   const key = (c, r) => c + ',' + r;
@@ -390,7 +396,7 @@
     cascadeLoop(ctx);
   }
 
-  function runBonus(ctx) {
+  function runBonus(ctx, opts = {}) {
     ctx.inBonus = true;
     ctx.dragon = true;
     ctx.spinsLeft = CONFIG.freeSpins;
@@ -398,12 +404,12 @@
     ctx.thresholdIdx = 0;
     ctx.zoneHits = [0, 0, 0];
     ctx.stormZones = [false, false, false];
-    const [lo, hi] = CONFIG.bonusWilds;
+    const [lo, hi] = opts.wilds || CONFIG.bonusWilds;
     const cells = placeStormWilds(ctx, lo + randInt(ctx.rng, hi - lo + 1));
     const winBefore = ctx.win;
     push(ctx, { type: 'bonusStart', cells, spins: ctx.spinsLeft });
     setCharge(ctx, 0);
-    setIntensity(ctx, Math.max(ctx.intensity, LEVELS[1].need));
+    setIntensity(ctx, Math.max(ctx.intensity, LEVELS[opts.startLevel || 1].need));
     let n = 0;
     while (ctx.spinsLeft > 0 && !capped(ctx)) {
       ctx.spinsLeft--;
@@ -429,6 +435,30 @@
     return { steps: ctx.steps, win: ctx.win, bonus: ctx.bonusTriggered };
   }
 
+  /**
+   * Achat direct d'un bonus. Le prix (cost × mise) est payé à la place de la mise ;
+   * les gains restent calculés sur la mise et plafonnés à maxWinX × mise.
+   */
+  function buyBonus(kind, bet, rng) {
+    const offer = BONUS_BUYS[kind];
+    if (!offer) throw new Error('Bonus inconnu : ' + kind);
+    const ctx = newCtx(bet, rng);
+    // A calm, non-paying grid for the moment before the BOOM.
+    do ctx.grid = randomGrid(rng); while (maxCount(ctx.grid) >= CONFIG.minWin - 2);
+    ctx.steps.push({ type: 'start' });
+    push(ctx, { type: 'buy', kind, cost: offer.cost * bet });
+    ctx.bonusTriggered = true;
+    runBonus(ctx, offer);
+    ctx.steps.push({ type: 'end', win: ctx.win });
+    return { steps: ctx.steps, win: ctx.win, bonus: true, cost: offer.cost * bet };
+  }
+
+  function maxCount(grid) {
+    const n = {};
+    for (const col of grid) for (const cell of col) n[cell.s] = (n[cell.s] || 0) + 1;
+    return Math.max(...Object.values(n));
+  }
+
   // Deterministic RNG for simulations and replays.
   function mulberry32(seed) {
     let a = seed >>> 0;
@@ -441,7 +471,7 @@
     };
   }
 
-  const api = { COLS, ROWS, CONFIG, SYMBOLS, PAYING, PREMIUM, LEVELS, spin, randomGrid, levelFor, mulberry32, zoneOf };
+  const api = { COLS, ROWS, CONFIG, SYMBOLS, PAYING, PREMIUM, LEVELS, BONUS_BUYS, spin, buyBonus, randomGrid, levelFor, mulberry32, zoneOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.StormEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
