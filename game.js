@@ -818,6 +818,35 @@ async function freeSpinsWon(spins) {
   goal.classList.remove('fire');
 }
 
+// Shows a hint and resolves on the next tap, click or key press anywhere; that input does nothing else.
+function waitForTap() {
+  return new Promise((resolve) => {
+    const hint = document.createElement('div');
+    hint.className = 'tap-hint';
+    hint.textContent = 'Touche l\u2019écran pour commencer';
+    $('#boardWrap').appendChild(hint);
+    requestAnimationFrame(() => hint.classList.add('show'));
+    const swallow = (e) => { e.stopPropagation(); e.preventDefault(); };
+    const go = (e) => {
+      swallow(e);
+      window.removeEventListener('pointerdown', go, true);
+      window.removeEventListener('keydown', go, true);
+      // the click that follows this press must not reach SPIN or a button
+      window.addEventListener('click', swallow, true);
+      setTimeout(() => window.removeEventListener('click', swallow, true), 400);
+      audio.init();
+      hint.classList.remove('show');
+      setTimeout(() => hint.remove(), 400);
+      resolve();
+    };
+    // a short grace period so a double click on the buy button does not skip it
+    setTimeout(() => {
+      window.addEventListener('pointerdown', go, true);
+      window.addEventListener('keydown', go, true);
+    }, 500);
+  });
+}
+
 async function eyeOfTheStorm(step) {
   state.inBonus = true;
   if (!state.boughtKind) await freeSpinsWon(step.spins);
@@ -849,8 +878,18 @@ async function eyeOfTheStorm(step) {
   audio.whoosh();
   await sleep(450);
   fx.ring(center.x, center.y, '255,214,120');
-  await banner('EYE OF THE STORM', 1900);
-  await sleep(900);
+  if (state.boughtKind) {
+    // a bought bonus waits for the player: touch anywhere to start
+    await banner('EYE OF THE STORM', 600000);
+    await waitForTap();
+    clearTimeout(bannerTimer);
+    $('#banner').classList.remove('show');
+    audio.whoosh();
+    await sleep(350);
+  } else {
+    await banner('EYE OF THE STORM', 1900);
+    await sleep(900);
+  }
 
   board.classList.add('appear');
   board.classList.remove('vanish');

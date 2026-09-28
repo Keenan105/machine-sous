@@ -1089,6 +1089,33 @@ button:focus-visible { outline: 2px solid #9fe3ff; outline-offset: 2px; }
 #bonusWin.t4 .bw-tier, #bonusWin.t5 .bw-tier { background: linear-gradient(180deg, #ffffff 10%, #ffb3c2 45%, #ff4d73 75%, #8a1030); -webkit-background-clip: text; background-clip: text; }
 @media (prefers-reduced-motion: reduce) { .bw-rays, .bw-emblem { animation: none; } }
 
+/* bought bonus: waits for a tap */
+.tap-hint {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  top: calc(50% + 46px);
+  transform: translate(-50%, 8px);
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-family: Cinzel, Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(11px, 2.6vw, 14px);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #ffe6a8;
+  background: rgba(6, 6, 18, 0.72);
+  border: 1px solid rgba(255, 214, 120, 0.45);
+  box-shadow: 0 0 20px rgba(255, 200, 90, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.tap-hint.show { opacity: 1; transform: translate(-50%, 0); animation: tapPulse 1.6s ease-in-out 0.4s infinite; }
+@keyframes tapPulse { 50% { opacity: 0.55; box-shadow: 0 0 34px rgba(255, 200, 90, 0.5); } }
+@media (prefers-reduced-motion: reduce) { .tap-hint.show { animation: none; } }
+
 /* free spins won with 4 bolts */
 .ft-orb {
   position: fixed;
