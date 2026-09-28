@@ -1736,16 +1736,18 @@ section, #msg { background: rgba(8, 12, 22, 0.74); }
 .cell::before {
   content: '';
   position: absolute;
-  inset: -5%;
+  inset: -2px;
   z-index: 0;
   pointer-events: none;
-  background: url(img/frame-blue.webp) center / 100% 100% no-repeat;
+  border: 0 solid transparent;
+  border-image: url(img/frame-blue.webp) 24% / 9px stretch;
+  opacity: 0.85;
   transition: opacity 0.3s;
 }
 .cell .sym { position: relative; z-index: 1; }
-.cell.s-trident::before, .cell.s-eagle::before, .cell.s-crown::before, .cell.s-charge::before, .cell.s-dragon::before { background-image: url(img/frame-gold.webp); }
-.cell.s-leaf::before { background-image: url(img/frame-green.webp); }
-.cell.spinning::before { background-image: url(img/frame-blue.webp); opacity: 0.85; }
+.cell.s-trident::before, .cell.s-eagle::before, .cell.s-crown::before, .cell.s-charge::before, .cell.s-dragon::before { border-image-source: url(img/frame-gold.webp); }
+.cell.s-leaf::before { border-image-source: url(img/frame-green.webp); }
+.cell.spinning::before { border-image-source: url(img/frame-blue.webp); opacity: 0.7; }
 
 /* the grid and the side panels share the clouded gold-and-ice frame */
 #weather, #gauge, #boardWrap { position: relative; border-color: transparent; }
@@ -1756,9 +1758,10 @@ section, #msg { background: rgba(8, 12, 22, 0.74); }
   pointer-events: none;
   border-style: solid;
   border-color: transparent;
-  border-image: url(img/panel-frame.webp) 64 100 70 100 / 20px 30px 22px 30px stretch;
+  border-image: url(img/panel-frame.webp) 64 100 70 100 / 13px 19px 14px 19px stretch;
+  opacity: 0.9;
 }
-#weather::after, #gauge::after { inset: -9px -11px -10px -11px; }
-#boardWrap::after { inset: 0; border-image-width: 18px 26px 20px 26px; }
-#boardWrap { padding: 12px; }
-#sidePanel { gap: 22px; }
+#weather::after, #gauge::after { inset: -5px -6px -6px -6px; }
+#boardWrap::after { inset: 0; border-image-width: 12px 17px 13px 17px; }
+#boardWrap { padding: 10px; }
+#sidePanel { gap: 16px; }
