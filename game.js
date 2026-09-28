@@ -741,8 +741,86 @@ function bonusCelebration(win, spins) {
 
 /* ------------------------- Eye of the Storm (bonus) ------------------------- */
 
+// 4 bolts collected: the gauge fires, its bolts fly together and the free spins are announced.
+async function freeSpinsWon(spins) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const slots = [...document.querySelectorAll('.slot')];
+  const goal = $('.charge-goal');
+  const target = { x: innerWidth / 2, y: innerHeight * 0.46 };
+
+  // the four slots light up one after the other
+  for (const [i, el] of slots.entries()) {
+    el.classList.remove('fire');
+    void el.offsetWidth;
+    el.classList.add('fire');
+    audio.chime(i + 2);
+    await sleep(110);
+  }
+  goal.classList.remove('fire');
+  void goal.offsetWidth;
+  goal.classList.add('fire');
+  await sleep(180);
+
+  // each bolt leaves its slot as a glowing orb and curves toward the centre
+  audio.whoosh();
+  const flights = slots.map((el, i) => {
+    const a = centerOf(el);
+    const orb = document.createElement('div');
+    orb.className = 'ft-orb';
+    document.body.appendChild(orb);
+    const lift = 140 + i * 30;
+    const cx = (a.x + target.x) / 2 + (i - 1.5) * 60;
+    const cy = Math.min(a.y, target.y) - lift;
+    const frames = [];
+    for (let k = 0; k <= 16; k++) {
+      const t = k / 16, u = 1 - t;
+      const x = u * u * a.x + 2 * u * t * cx + t * t * target.x;
+      const y = u * u * a.y + 2 * u * t * cy + t * t * target.y;
+      frames.push({ transform: `translate(${x}px, ${y}px) scale(${1 + Math.sin(t * Math.PI) * 0.6 - t * 0.3})`, opacity: t > 0.94 ? 0.6 : 1 });
+    }
+    const anim = orb.animate(frames, { duration: reduce ? 1 : 720, delay: i * 70, easing: 'cubic-bezier(.45, 0, .2, 1)', fill: 'forwards' });
+    return anim.finished.then(() => { fx.burst(target.x, target.y, '#ffd46b'); orb.remove(); });
+  });
+  await Promise.all(flights);
+
+  // they meet: flash, shockwave, the emblem and the number of spins
+  fx.flash = 1.1;
+  fx.ring(target.x, target.y, '255,214,120');
+  setTimeout(() => fx.ring(target.x, target.y, '180,150,255'), 140);
+  audio.boom();
+  audio.fanfare();
+  const ov = $('#fsTrigger');
+  const nEl = ov.querySelector('.ft-n');
+  nEl.textContent = '0';
+  ov.className = '';
+  ov.hidden = false;
+  void ov.offsetWidth;
+  ov.classList.add('show');
+  fx.coinShower(40);
+
+  await sleep(650);
+  for (let n = 1; n <= spins; n++) {
+    nEl.textContent = n;
+    nEl.classList.remove('bump');
+    void nEl.offsetWidth;
+    nEl.classList.add('bump');
+    audio.tick(1 + n * 0.12);
+    await sleep(Math.max(70, 150 - n * 8));
+  }
+  audio.chime(6);
+  await sleep(1500);
+
+  ov.classList.add('out');
+  await sleep(600);
+  ov.hidden = true;
+  ov.className = '';
+  slots.forEach((el) => el.classList.remove('fire'));
+  goal.classList.remove('fire');
+}
+
 async function eyeOfTheStorm(step) {
   state.inBonus = true;
+  if (!state.boughtKind) await freeSpinsWon(step.spins);
   say('…');
   audio.silence(0);
   document.body.classList.add('hush');
@@ -763,13 +841,20 @@ async function eyeOfTheStorm(step) {
   setTimeout(() => document.body.classList.remove('shake'), 700);
   board.classList.add('vanish');
   await sleep(500);
-  $('#eye').classList.add('show');
+  const eye = $('#eye');
+  eye.classList.remove('out');
+  eye.classList.add('show');
   audio.restore();
   audio.startMusic();
-  await banner('EYE OF THE STORM', 1600);
-  await sleep(700);
+  audio.whoosh();
+  await sleep(450);
+  fx.ring(center.x, center.y, '255,214,120');
+  await banner('EYE OF THE STORM', 1900);
+  await sleep(900);
 
+  board.classList.add('appear');
   board.classList.remove('vanish');
+  setTimeout(() => board.classList.remove('appear'), 900);
   state.dragon = true;
   state.zoneHits = [0, 0, 0];
   state.stormZones = [false, false, false];
@@ -784,7 +869,8 @@ async function eyeOfTheStorm(step) {
     audio.zap(1);
     await sleep(170);
   }
-  $('#eye').classList.remove('show');
+  eye.classList.add('out');
+  setTimeout(() => eye.classList.remove('show', 'out'), 800);
   setFreeSpins(`EYE OF THE STORM · ${step.spins} tours gratuits`);
   say(`${step.cells.length} Storm Wilds 🌀 restent en place, le Gardien veille pendant ${step.spins} tours gratuits !`);
   await sleep(700);
