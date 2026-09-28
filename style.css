@@ -1729,3 +1729,36 @@ h1 { font-size: clamp(24px, 6vw, 34px); }
 section, #msg { background: rgba(8, 12, 22, 0.74); }
 #banner, #eye, .reel-track, .float { will-change: transform, opacity; }
 #bgcanvas, canvas#bg, canvas#fx { transform: translateZ(0); }
+
+/* ---------- ornate storm frames ---------- */
+/* every cell wears a frame matching its symbol: ice for water and stone, gold for the noble symbols, vine for the leaf */
+.cell { border-color: transparent; background: radial-gradient(circle at 50% 45%, rgba(26, 36, 70, 0.9), rgba(6, 9, 22, 0.95) 75%); }
+.cell::before {
+  content: '';
+  position: absolute;
+  inset: -5%;
+  z-index: 0;
+  pointer-events: none;
+  background: url(img/frame-blue.webp) center / 100% 100% no-repeat;
+  transition: opacity 0.3s;
+}
+.cell .sym { position: relative; z-index: 1; }
+.cell.s-trident::before, .cell.s-eagle::before, .cell.s-crown::before, .cell.s-charge::before, .cell.s-dragon::before { background-image: url(img/frame-gold.webp); }
+.cell.s-leaf::before { background-image: url(img/frame-green.webp); }
+.cell.spinning::before { background-image: url(img/frame-blue.webp); opacity: 0.85; }
+
+/* the grid and the side panels share the clouded gold-and-ice frame */
+#weather, #gauge, #boardWrap { position: relative; border-color: transparent; }
+#weather::after, #gauge::after, #boardWrap::after {
+  content: '';
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  border-style: solid;
+  border-color: transparent;
+  border-image: url(img/panel-frame.webp) 64 100 70 100 / 20px 30px 22px 30px stretch;
+}
+#weather::after, #gauge::after { inset: -9px -11px -10px -11px; }
+#boardWrap::after { inset: 0; border-image-width: 18px 26px 20px 26px; }
+#boardWrap { padding: 12px; }
+#sidePanel { gap: 22px; }
