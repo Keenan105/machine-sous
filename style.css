@@ -1737,7 +1737,7 @@ section, #msg { background: rgba(8, 12, 22, 0.74); }
   content: '';
   position: absolute;
   inset: -2px;
-  z-index: 0;
+  z-index: 4; /* above the spinning reel strips so frames never disappear */
   pointer-events: none;
   border: 0 solid transparent;
   border-image: url(img/frame-blue.webp) 24% / 9px stretch;
@@ -1747,7 +1747,6 @@ section, #msg { background: rgba(8, 12, 22, 0.74); }
 .cell .sym { position: relative; z-index: 1; }
 .cell.s-trident::before, .cell.s-eagle::before, .cell.s-crown::before, .cell.s-charge::before, .cell.s-dragon::before { border-image-source: url(img/frame-gold.webp); }
 .cell.s-leaf::before { border-image-source: url(img/frame-green.webp); }
-.cell.spinning::before { border-image-source: url(img/frame-blue.webp); opacity: 0.7; }
 
 /* the grid and the side panels share the clouded gold-and-ice frame */
 #weather, #gauge, #boardWrap { position: relative; border-color: transparent; }
