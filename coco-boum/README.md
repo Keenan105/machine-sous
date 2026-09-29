@@ -1,6 +1,16 @@
 # 🐔💥 COCO BOUM! — La poule qui pond de la dynamite
 
-Nouvelle machine à sous au style dessin animé. Pour l'instant : le **moteur mathématique** complet et calé, et le **prompt pour les animations** (`PROMPT_CHATGPT.md`). L'interface viendra ensuite avec les images.
+Nouvelle machine à sous au style dessin animé, **jouable** avec des dessins provisoires (SVG) et des sons synthétisés.
+Les images finales se commandent avec le prompt `PROMPT_CHATGPT.md`.
+
+**Lancer :** depuis la racine du dépôt, `lancer.bat` (Windows) ou `./lancer.command` (Mac/Linux), puis ouvrir http://localhost:8000/coco-boum/.
+**Tester :** `coco.bonus()`, `coco.super()` ou `coco.eggs()` dans la console du navigateur. Barre d'espace = lancer ; cliquer pendant un tour l'accélère.
+
+## Fichiers
+- `engine.js` : moteur mathématique, sans affichage. Chaque mise est calculée en entier puis rejouée par l'interface.
+- `game.js` : interface, animations, sons.
+- `art.js` : dessins cartoon provisoires (à remplacer par les images finales).
+- `simulate.js` : mesure du RTP avec le même moteur.
 
 ## Le concept
 - Grille **7×6**, gains par **grappes de 5+ symboles** qui se touchent, avec dégringolades.

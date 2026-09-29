@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coco Boum!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--BODY-->
+<div id="scene" aria-hidden="true">
+  <div class="sun"><div class="rays"></div><div class="face"></div></div>
+  <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+  <svg class="hills" viewBox="0 0 1600 400" preserveAspectRatio="none">
+    <path d="M0 220 C200 140 380 150 560 210 C760 120 980 130 1180 200 C1340 150 1480 160 1600 190 V400 H0Z" fill="#9be36b" stroke="#2a1608" stroke-width="5"/>
+    <path d="M0 300 C260 230 520 240 800 290 C1060 230 1340 240 1600 280 V400 H0Z" fill="#6cc644" stroke="#2a1608" stroke-width="5"/>
+  </svg>
+  <svg class="mill" viewBox="0 0 120 200">
+    <path d="M44 196 L52 80 H68 L76 196Z" fill="#fff4dc" stroke="#2a1608" stroke-width="5" stroke-linejoin="round"/>
+    <g class="blades"><path d="M60 80 L60 10 L74 14 Z M60 80 L130 80 L126 94Z M60 80 L60 150 L46 146Z M60 80 L-10 80 L-6 66Z" fill="#e0452b" stroke="#2a1608" stroke-width="4" stroke-linejoin="round"/><circle cx="60" cy="80" r="8" fill="#ffd23f" stroke="#2a1608" stroke-width="4"/></g>
+  </svg>
+</div>
+
+<div id="app">
+  <header id="top">
+    <h1 class="logo"><span class="w1">COCO</span> <span class="w2">BOUM!</span></h1>
+    <div class="tag">La poule qui pond de la dynamite</div>
+  </header>
+
+  <main id="stage">
+    <aside id="left">
+      <div id="cocoBox"><div id="bubble" hidden></div><div id="coco"></div></div>
+      <div id="basket" title="Panier : les multiplicateurs des œufs s'additionnent ici">
+        <div class="basket-label">Panier</div>
+        <div class="basket-val" id="basketVal">×0</div>
+      </div>
+      <div id="fsBox" hidden>
+        <div class="fs-label">Tours gratuits</div>
+        <div class="fs-val"><span id="fsLeft">10</span></div>
+      </div>
+    </aside>
+
+    <section id="boardWrap">
+      <div id="board"></div>
+      <div id="fx"></div>
+      <div id="winFloat" hidden></div>
+    </section>
+
+    <aside id="right">
+      <button class="plank buy" id="buyBtn"><b>Acheter</b><span>le bonus</span></button>
+      <label class="plank ante" id="anteBox"><input type="checkbox" id="ante"><span><b>Double Chance</b><small>mise ×1,25, bonus plus fréquent</small></span></label>
+      <button class="plank info" id="infoBtn"><b>Règles</b><span>et gains</span></button>
+    </aside>
+  </main>
+
+  <footer id="bar">
+    <div class="field"><small>Solde</small><b id="balance">1 000,00</b></div>
+    <div class="field bet">
+      <small>Mise</small>
+      <div class="betrow"><button class="round" id="betDown" aria-label="Baisser la mise">−</button><b id="bet">1,00</b><button class="round" id="betUp" aria-label="Augmenter la mise">+</button></div>
+    </div>
+    <button id="spin" aria-label="Lancer"><svg viewBox="0 0 100 100"><path d="M50 18 A32 32 0 1 1 20 40" fill="none" stroke="#2a1608" stroke-width="11" stroke-linecap="round"/><path d="M50 18 A32 32 0 1 1 20 40" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M8 34 L24 50 L32 28Z" fill="#fff" stroke="#2a1608" stroke-width="4" stroke-linejoin="round"/></svg></button>
+    <div class="field win"><small>Gain</small><b id="win">0,00</b></div>
+    <div class="toggles">
+      <button class="round wide" id="autoBtn">Auto</button>
+      <button class="round wide" id="turboBtn">Turbo</button>
+      <button class="round" id="soundBtn" aria-label="Son">🔊</button>
+    </div>
+  </footer>
+</div>
+
+<div id="overlay" hidden><div class="card" id="overlayCard"></div></div>
+<canvas id="confetti"></canvas>
+<!--/BODY-->
+<script src="engine.js"></script>
+<script src="art.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
