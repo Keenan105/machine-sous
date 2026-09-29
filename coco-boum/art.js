@@ -140,6 +140,26 @@
       <circle cx="55" cy="78" r="2" fill="#e7c98f"/>
       ${shine('M32 30 C26 40 24 52 25 60 C29 48 33 38 40 28Z')}`,
 
+    nestbase: `
+      <path d="M8 70 C10 92 90 92 92 70 C80 80 20 80 8 70Z" fill="#c98a4b" ${S}/>
+      <path d="M12 74 L30 84 M24 72 L44 88 M40 76 L58 88 M56 74 L74 86 M72 72 L88 80 M20 84 L36 76 M50 88 L66 76" stroke="#8a5528" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M8 70 C20 62 80 62 92 70" fill="none" stroke="#e3b16a" stroke-width="5" stroke-linecap="round"/>`,
+
+    nest: `
+      <path d="M50 14 C66 14 76 40 76 54 C76 70 64 78 50 78 C36 78 24 70 24 54 C24 40 34 14 50 14Z" fill="#fff4dc" ${S}/>
+      <circle cx="42" cy="36" r="2.5" fill="#e7c98f"/><circle cx="60" cy="48" r="3" fill="#e7c98f"/>
+      ${shine('M34 30 C30 38 29 46 30 52 C33 44 36 36 41 30Z')}
+      <path d="M6 62 C8 94 92 94 94 62 C80 74 20 74 6 62Z" fill="#c98a4b" ${S}/>
+      <path d="M12 70 L30 82 M24 68 L44 86 M42 72 L58 86 M58 70 L74 84 M72 68 L88 76 M20 82 L36 72" stroke="#8a5528" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M6 62 C20 54 80 54 94 62" fill="none" stroke="#e3b16a" stroke-width="5" stroke-linecap="round"/>`,
+
+    golden: `
+      <path d="M50 8 C72 8 84 44 84 62 C84 82 68 93 50 93 C32 93 16 82 16 62 C16 44 28 8 50 8Z" fill="#ffcf2e" ${S}/>
+      <path d="M50 20 C64 22 74 48 74 62 C74 76 64 84 50 84" fill="none" stroke="#f0a800" stroke-width="5" stroke-linecap="round"/>
+      ${shine('M32 30 C26 40 24 52 25 60 C29 48 33 38 40 28Z')}
+      <path d="M80 10 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3Z M14 22 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2Z" fill="#fff" stroke="${O}" stroke-width="2" stroke-linejoin="round"/>
+      <text x="50" y="68" text-anchor="middle" font-family="Luckiest Guy, Impact, sans-serif" font-size="22" fill="#fff" stroke="${O}" stroke-width="1.5">×5+</text>`,
+
     crack1: `<path d="M20 50 L32 46 L38 54 L48 46 L54 52" fill="none" stroke="${O}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`,
     crack2: `<path d="M16 56 L28 48 L36 58 L46 46 L56 56 L64 44 L72 52 L84 50" fill="none" stroke="${O}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
       <path d="M46 46 L44 34 L50 26 M56 56 L60 68 L54 76" fill="none" stroke="${O}" stroke-width="2.5" stroke-linecap="round"/>`,

@@ -29,7 +29,12 @@ Tu es directeur artistique et animateur 2D pour une machine à sous en ligne (ca
   1. un **multiplicateur** (×2 à ×500) qui s'envole dans le **Panier** de Coco ;
   2. un **Poussin Wild** (joker) ;
   3. un bâton de **dynamite** qui explose en 3×3 (et fêle les œufs voisins : réaction en chaîne).
-- 4 **Granges** = tours gratuits **« La Grange en Folie »** : le Panier ne se vide plus et multiplie chaque gain.
+- Il y a **5 bonus** (tours gratuits), achetables à 10×, 20×, 50×, 100× et 200× la mise :
+  1. **Poussins en Folie** (10×) : des Poussins Wild sautent sur la grille à chaque tour.
+  2. **Nid Collant** (20×) : les œufs restent collés dans des nids de paille d'un tour à l'autre.
+  3. **Pluie de Dynamite** (50×) : Coco lance des bâtons de dynamite sur la grille au début de chaque tour.
+  4. **La Grange en Folie** (100×, ou 4 Granges) : le Panier ne se vide plus et multiplie chaque gain.
+  5. **Super Grange** (200×, ou 5 Granges) : œufs dorés en pagaille, multiplicateurs ×5 minimum.
 
 ## Liste de tout ce qu'il faut créer
 
@@ -70,8 +75,16 @@ Tu es directeur artistique et animateur 2D pour une machine à sous en ligne (ca
 26. **Décor jeu de base** : ferme en plein jour, collines vertes, soleil souriant, nuages qui défilent, grange au loin, moulin à vent qui tourne (couches séparées pour un effet de parallaxe).
 27. **Décor tours gratuits** : la même ferme au coucher de soleil orange et violet, lampions, feu d'artifice, ambiance fête.
 
+### E bis. Les 5 bonus (pour chacun : une icône 512×512, un décor de ciel, un écran d'introduction)
+27a. **Poussins en Folie** : ciel orange de fin d'après-midi, une armée de poussins à lunettes qui sautent en parachute.
+27b. **Nid Collant** : ciel rose bonbon, nids de paille avec des œufs, animation d'un œuf qui se « colle » dans son nid (petit « SPLOUCH »).
+27c. **Pluie de Dynamite** : nuit rouge, Coco en casque de chantier lance des bâtons de dynamite qui tombent en tournoyant sur la grille.
+27d. **La Grange en Folie** : coucher de soleil violet et orange, la grange fait la fête (lampions, feux d'artifice).
+27e. **Super Grange** : nuit étoilée bleu foncé et or, grange dorée, œufs d'or qui brillent.
+27f. **Écran d'achat des bonus** : 5 panneaux en bois côte à côte avec un prix cloué (10×, 20×, 50×, 100×, 200×), du plus simple au plus luxueux.
+
 ### F. Grands moments
-28. **Déclenchement du bonus** : les 4 Granges brillent, zoom, les portes d'une géante grange s'ouvrent sur l'écran, texte « LA GRANGE EN FOLIE! — 10 TOURS GRATUITS ».
+28. **Déclenchement du bonus** : les Granges brillent, zoom, les portes d'une géante grange s'ouvrent sur l'écran, texte « LA GRANGE EN FOLIE! — 10 TOURS GRATUITS ».
 29. **Relance** : « +5 TOURS! » qui tombe comme une enclume.
 30. **Écrans de gros gains** (texte + animation, de plus en plus fous) : « GROS GAIN! » (×20), « MÉGA GAIN! » (×50), « ÉNORME! » (×100), « COCO-LOSSAL! » (×500), et **« BOUM MAXIMUM ×10 000 »**. Pluie de pièces, de plumes et d'œufs dorés, compteur qui défile.
 31. **Fin du bonus** : panneau en bois « TOTAL GAGNÉ » avec Coco qui salue.

@@ -95,13 +95,15 @@ body.fs .sun .face { background: #ffb347; }
 .cell .sym { position: relative; width: 100%; height: 100%; transform-origin: 50% 90%; }
 .cell svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .cell .crack { position: absolute; inset: 0; }
-.cell.landed .sym { animation: squash calc(300ms / var(--speed)) ease-out; }
+.cell.landed .sym { animation: bounce calc(360ms / var(--speed)) ease-out; }
 .cell.win .sym { animation: wiggle calc(260ms / var(--speed)) ease-in-out infinite; filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px #ffd23f); }
 .cell.pop .sym { animation: pop calc(300ms / var(--speed)) ease-in forwards; }
 .cell.egg .sym { animation: eggIdle 2.2s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 210, 63, .9)); }
 .cell.shake .sym { animation: shake calc(90ms / var(--speed)) linear 5; }
 .cell.barn.glow .sym { animation: barnGlow .5s ease-in-out infinite alternate; }
 .cell.charred .sym { filter: brightness(.25) sepia(1); }
+@keyframes bounce { 0% { transform: scale(1.12, .86); } 30% { transform: translateY(-14%) scale(.95, 1.06); } 55% { transform: translateY(0) scale(1.05, .95); }
+  75% { transform: translateY(-4%) scale(.99, 1.01); } 100% { transform: none; } }
 @keyframes squash { 0% { transform: scale(1.15, .8); } 55% { transform: scale(.94, 1.08); } 100% { transform: none; } }
 @keyframes wiggle { 0%, 100% { transform: rotate(-7deg) scale(1.08); } 50% { transform: rotate(7deg) scale(1.08); } }
 @keyframes pop { 0% { transform: scale(1.1); } 40% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
@@ -221,7 +223,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 
 /* ---------- fenêtres ---------- */
 #overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(42, 22, 8, .55); }
-#overlay .card { position: relative; max-width: 620px; width: 100%; max-height: 90%; overflow: auto; background: var(--cream); border: 6px solid var(--ink); border-radius: 26px;
+#overlay .card { position: relative; max-width: 620px; transition: max-width .2s; width: 100%; max-height: 90%; overflow: auto; background: var(--cream); border: 6px solid var(--ink); border-radius: 26px;
   box-shadow: 0 10px 0 var(--ink); padding: 22px; text-align: center; animation: slam .45s cubic-bezier(.3, 1.6, .5, 1); }
 .card h2 { font-family: var(--display); font-weight: 400; font-size: 38px; margin: 0 0 8px; color: var(--chick); -webkit-text-stroke: 2.5px var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink); line-height: 1.1; }
 .card h2.red { color: var(--barn); }
@@ -230,11 +232,6 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 .card .go { margin-top: 14px; font-family: var(--display); font-size: 24px; padding: 10px 28px; border: 5px solid var(--ink); border-radius: 18px; background: var(--chick); box-shadow: 0 6px 0 var(--ink); }
 .card .go.alt { background: #fff; }
 .card .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.buycard { flex: 1 1 220px; border: 5px solid var(--ink); border-radius: 18px; padding: 12px; background: #fff; box-shadow: 0 5px 0 var(--ink); display: flex; flex-direction: column; gap: 6px; align-items: center; }
-.buycard h3 { font-family: var(--display); font-weight: 400; font-size: 24px; margin: 0; color: var(--barn); -webkit-text-stroke: 1px var(--ink); }
-.buycard .price { font-family: var(--display); font-size: 30px; }
-.buycard p { font-size: 14px; margin: 0; }
-.buycard .go { margin-top: auto; font-size: 20px; padding: 8px 20px; }
 .paytable { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
 .pay { border: 4px solid var(--ink); border-radius: 14px; background: #fff; padding: 6px; font-size: 13px; }
 .pay svg { width: 56px; height: 56px; }
@@ -244,6 +241,87 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 .close { position: absolute; top: 10px; right: 10px; }
 #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
 .bigwin h2 { font-size: clamp(40px, 8vw, 70px); animation: wobble .8s ease-in-out infinite; }
+
+/* ---------- bonus ---------- */
+.cell .nestbase { position: absolute; left: 2%; right: 2%; bottom: -4%; height: 70%; }
+.cell .nestbase svg { width: 100%; height: 100%; }
+.cell.sticky .sym { filter: drop-shadow(0 0 6px #ff7ad9); }
+.dyn.falling { animation: dynDrop calc(450ms / var(--speed)) cubic-bezier(.5, 0, .8, .6), fizz 120ms linear infinite calc(450ms / var(--speed)); }
+@keyframes dynDrop { from { transform: translate(-50%, -400%) rotate(-180deg); } }
+.fs-name { font-family: var(--display); color: #fff; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; font-size: 18px; line-height: 1.1; }
+body.fs-chicks { --sky-top: #ff9a3c; --sky-bottom: #ffe7a0; }
+body.fs-sticky { --sky-top: #c04fd6; --sky-bottom: #ffc2e8; }
+body.fs-dynamite { --sky-top: #1d1446; --sky-bottom: #e0452b; }
+body.fs-grange { --sky-top: #5b2a86; --sky-bottom: #ff9d5c; }
+body.fs-super { --sky-top: #0b1a3d; --sky-bottom: #d4a017; }
+.bonus-intro .intro-ico { width: 110px; height: 110px; animation: wobble 1.2s ease-in-out infinite; }
+.card .note { font-weight: 700; font-size: 15px; }
+#overlay .card.wide { max-width: 980px; }
+.buygrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 10px; }
+.buycard { position: relative; border: 5px solid var(--ink); border-radius: 18px; padding: 14px 10px 12px; background: #fff; box-shadow: 0 5px 0 var(--ink);
+  display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.buycard .buy-ico { width: 74px; height: 74px; }
+.buycard:hover .buy-ico { animation: wobble .6s ease-in-out infinite; }
+.buycard h3 { font-family: var(--display); font-weight: 400; font-size: 20px; margin: 0; color: var(--barn); -webkit-text-stroke: 1px var(--ink); line-height: 1.1; }
+.buycard .short { font-weight: 700; font-size: 14px; margin: 0; }
+.buycard .spins { font-size: 12px; margin: 0; opacity: .8; }
+.buycard .go { margin-top: auto; font-size: 20px; padding: 6px 14px; width: 100%; }
+.tag-price { position: absolute; top: -14px; right: -8px; background: var(--barn); color: #fff; font-family: var(--display); font-size: 18px; border: 4px solid var(--ink); border-radius: 12px; padding: 2px 8px; transform: rotate(6deg); -webkit-text-stroke: 1px var(--ink); }
+.tier0 { background: #fffbe6; } .tier1 { background: #fff0fb; } .tier2 { background: #fff0ea; } .tier3 { background: #f6efff; } .tier4 { background: #fff7d1; }
+.buycard.tier4 { box-shadow: 0 5px 0 var(--ink), 0 0 18px #ffd23f; }
+
+/* ---------- règles ---------- */
+.tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 6px 0 12px; }
+.tab { border: 4px solid var(--ink); border-radius: 14px; background: #fff; padding: 6px 14px; font-weight: 700; font-size: 15px; box-shadow: 0 3px 0 var(--ink); }
+.tab.on { background: var(--chick); transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.tabbody { text-align: left; }
+.tabbody p { max-width: none; margin: 8px 0; font-size: 15px; }
+.tabbody .lead { font-size: 16px; }
+.tabbody .small { font-size: 13px; opacity: .85; }
+.tabbody h3.sub { font-family: var(--display); font-weight: 400; font-size: 22px; margin: 16px 0 4px; color: var(--barn); -webkit-text-stroke: 1px var(--ink); }
+.tablewrap { overflow-x: auto; }
+.paytab, .odds, .facts { width: 100%; border-collapse: separate; border-spacing: 0; border: 4px solid var(--ink); border-radius: 14px; overflow: hidden; background: #fff; font-variant-numeric: tabular-nums; }
+.paytab th, .paytab td, .odds th, .odds td, .facts th, .facts td { padding: 6px 8px; border-bottom: 2px solid #ecdcc0; text-align: right; font-size: 14px; }
+.paytab thead th, .odds thead th { background: var(--wood-dark); color: #fff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; text-align: right; }
+.paytab thead th:first-child, .odds thead th:first-child { text-align: left; }
+.paytab tbody th, .odds tbody th { text-align: left; font-weight: 700; white-space: nowrap; }
+.paytab tbody th > *, .odds tbody th > * { vertical-align: middle; }
+.paytab tbody tr:nth-child(even) td, .paytab tbody tr:nth-child(even) th { background: #fff8ea; }
+.paytab tr.top th, .paytab tr.top td { background: #fff1c2 !important; }
+.paytab td:last-child { font-weight: 700; color: var(--barn); }
+.tab-ico { width: 34px; height: 34px; margin-right: 6px; }
+.odds tbody th span { display: inline-flex; flex-direction: column; }
+.odds small { font-weight: 500; font-size: 12px; opacity: .75; }
+.demo { display: grid; grid-template-columns: repeat(5, 22px); gap: 3px; align-items: center; margin: 6px 0 10px; }
+.demo i { width: 22px; height: 22px; border: 3px solid var(--ink); border-radius: 6px; background: #fff; }
+.demo i.on { background: var(--fox); }
+.demo span { grid-column: 6; grid-row: 1 / 4; margin-left: 12px; font-weight: 700; white-space: nowrap; }
+.specials { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.sp-card { border: 4px solid var(--ink); border-radius: 14px; background: #fff; padding: 10px; text-align: center; }
+.sp-card h4 { margin: 2px 0; font-family: var(--display); font-weight: 400; font-size: 18px; }
+.sp-card p { font-size: 13px !important; margin: 0 !important; }
+.sp-ico { width: 60px; height: 60px; }
+.coco-mini { display: inline-block; } .coco-mini .coco-svg { width: 100%; height: 100%; }
+.egg-steps { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
+.egg-steps > div { position: relative; display: flex; flex-direction: column; align-items: center; }
+.egg-steps .cr > div { position: absolute; top: 0; }
+.egg-steps small { font-size: 12px; opacity: .8; }
+.egg-steps span { font-family: var(--display); font-size: 26px; }
+.bonus-list { display: flex; flex-direction: column; gap: 10px; }
+.bl { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 4px solid var(--ink); border-radius: 16px; padding: 8px 12px; box-shadow: 0 4px 0 var(--ink); }
+.bl-ico { width: 64px; height: 64px; }
+.bl h4 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--barn); -webkit-text-stroke: .8px var(--ink); }
+.bl p { font-size: 13px !important; margin: 2px 0 4px !important; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips span { font-size: 12px; font-weight: 700; border: 2px solid var(--ink); border-radius: 10px; padding: 1px 8px; background: #fff; }
+.chips span.hot { background: var(--chick); }
+.bl-price { text-align: center; }
+.bl-price b { display: block; font-family: var(--display); font-weight: 400; font-size: 28px; }
+.bl-price small { font-weight: 700; }
+.facts th { text-align: left; }
+.facts td { font-weight: 700; }
+.keys { padding-left: 20px; font-size: 15px; }
+kbd { border: 2px solid var(--ink); border-bottom-width: 4px; border-radius: 6px; padding: 0 6px; background: #fff; font-family: var(--body); }
 
 /* ---------- téléphone ---------- */
 @media (max-width: 820px), (max-aspect-ratio: 1/1) {
@@ -262,6 +340,13 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
   .plank.ante small { display: none; }
   .plank.ante input { width: 22px; height: 22px; border-width: 3px; }
   .mill { display: none; }
+  .bl { grid-template-columns: 44px minmax(0, 1fr); }
+  .bl-ico { width: 44px; height: 44px; }
+  .bl-price { grid-column: 1 / -1; display: flex; gap: 10px; align-items: baseline; justify-content: flex-end; }
+  #overlay .card { padding: 16px 12px; }
+  .card h2 { font-size: 28px; padding: 0 34px; }
+  .demo span { white-space: normal; font-size: 13px; }
+  .buygrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #bar { gap: 8px 14px; padding: 6px 10px; }
   .field { min-width: 80px; }
   .field b { font-size: 20px; }
@@ -302,7 +387,8 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
         <div class="basket-val" id="basketVal">×0</div>
       </div>
       <div id="fsBox" hidden>
-        <div class="fs-label">Tours gratuits</div>
+        <div class="fs-name" id="fsName">Bonus</div>
+        <div class="fs-label">Tours gratuits restants</div>
         <div class="fs-val"><span id="fsLeft">10</span></div>
       </div>
     </aside>
@@ -314,7 +400,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     </section>
 
     <aside id="right">
-      <button class="plank buy" id="buyBtn"><b>Acheter</b><span>le bonus</span></button>
+      <button class="plank buy" id="buyBtn"><b>Bonus</b><span>5 bonus dès 10×</span></button>
       <label class="plank ante" id="anteBox"><input type="checkbox" id="ante"><span><b>Double Chance</b><small>mise ×1,25, bonus plus fréquent</small></span></label>
       <button class="plank info" id="infoBtn"><b>Règles</b><span>et gains</span></button>
     </aside>
@@ -365,7 +451,6 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     maxWinX: 10000,         // plafond de gain par mise, en multiple de la mise
     scatterNeed: 4,         // Granges pour déclencher les tours gratuits
     retriggerNeed: 3,       // Granges pour relancer pendant les tours gratuits
-    freeSpins: 10,
     retriggerSpins: 5,
     scatterPay: { 4: 3, 5: 5, 6: 100 }, // gains des Granges (× mise), jeu de base
     maxEggs: 6,             // œufs au maximum sur la grille
@@ -373,7 +458,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     cocoChanceFs: 0.3,      // idem pendant les tours gratuits
     cocoEggs: [2, 4],       // œufs pondus par Coco (min, max)
     anteCost: 1.25,         // Double Chance : la mise coûte ×1,25…
-    anteScatter: 1.135,     // …et les Granges tombent plus souvent (bonus ≈ 2× plus fréquent)
+    anteScatter: 1.135,     // …et les Granges tombent plus souvent (bonus ≈ 1,7× plus fréquent)
     maxSteps: 80,           // garde-fou contre les boucles
   };
 
@@ -386,7 +471,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     pig:     { name: 'Cochon',  w: [14, 14, 14], pay: 0.75 },
     cow:     { name: 'Vache',   w: [12, 12, 12], pay: 1 },
     fox:     { name: 'Renard',  w: [9, 9, 9],    pay: 1.5 },
-    barn:    { name: 'Grange',  w: [1.72, 1.3, 1.3] },
+    barn:    { name: 'Grange',  w: [1.655, 1.3, 1.3] },
     egg:     { name: 'Œuf',     w: [1.6, 6, 9] },
     wild:    { name: 'Poussin', w: [0, 0, 0] },
   };
@@ -414,11 +499,37 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
   };
   const MODE_IDX = { base: 0, fs: 1, super: 2 };
 
-  // Achats de bonus : prix en multiples de la mise, calés par simulation (simulate.js --buy).
-  const BONUS_BUYS = {
-    grange: { name: 'La Grange en Folie', cost: 100, mode: 'fs', desc: '10 tours gratuits, Panier persistant' },
-    super:  { name: 'Super Grange',       cost: 370, mode: 'super', desc: '10 tours gratuits, œufs en pagaille, multiplicateurs ×5 minimum' },
+  // Les 5 bonus, du moins cher au plus cher. cost : prix d'achat en multiples de la mise.
+  // spins : tours gratuits. pay : force des gains du bonus, calée par simulation (simulate.js --buy) pour un RTP ≈ 96 %.
+  // barns : Granges qui déclenchent ce bonus en jeu normal (les autres ne s'obtiennent qu'à l'achat).
+  const BONUSES = {
+    chicks: {
+      name: 'Poussins en Folie', icon: 'wild', cost: 10, spins: 5, pay: 0.152, mode: 'fs', wilds: [1, 2],
+      short: '1 à 2 Poussins Wild par tour',
+      desc: 'À chaque tour, 1 à 2 Poussins Wild sautent sur la grille pour souder les grappes.',
+    },
+    sticky: {
+      name: 'Nid Collant', icon: 'nest', cost: 20, spins: 6, pay: 0.476, mode: 'fs', sticky: true, maxEggs: 12,
+      short: 'Les œufs restent d\'un tour à l\'autre',
+      desc: 'Les œufs ne disparaissent plus : ils restent collés d\'un tour à l\'autre jusqu\'à leur éclosion (jusqu\'à 12 œufs).',
+    },
+    dynamite: {
+      name: 'Pluie de Dynamite', icon: 'dynamite', cost: 50, spins: 8, pay: 0.646, mode: 'fs', bombs: [1, 3],
+      short: '1 à 3 dynamites par tour',
+      desc: 'Au début de chaque tour, Coco lance 1 à 3 bâtons de dynamite : les explosions font tomber de nouveaux symboles et fêlent les œufs.',
+    },
+    grange: {
+      name: 'La Grange en Folie', icon: 'barn', cost: 100, spins: 10, pay: 1, keep: true, barns: 4, mode: 'fs',
+      short: 'Le bonus classique',
+      desc: 'Le bonus de 4 Granges : œufs plus nombreux, et le Panier ne se vide jamais.',
+    },
+    super: {
+      name: 'Super Grange', icon: 'golden', cost: 200, spins: 10, pay: 0.539, keep: true, barns: 5, mode: 'super',
+      short: 'Œufs en pagaille, ×5 minimum',
+      desc: 'Beaucoup plus d\'œufs, plus fragiles, et chaque multiplicateur vaut au moins ×5 (jusqu\'à ×500).',
+    },
   };
+  const BONUS_BUYS = BONUSES; // nom historique
 
   /* ---------- outils ---------- */
 
@@ -455,7 +566,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     const entries = SPAWNABLE.map((k) => {
       let w = SYMBOLS[k].w[mi];
       if (k === 'barn' && ctx.ante) w *= CONFIG.anteScatter;
-      if (k === 'egg' && (forbidEgg || ctx.eggs >= CONFIG.maxEggs)) w = 0;
+      if (k === 'egg' && (forbidEgg || ctx.eggs >= (ctx.maxEggs || CONFIG.maxEggs))) w = 0;
       return [k, w];
     });
     return makeCell(ctx, pickWeighted(entries, ctx.rng));
@@ -467,8 +578,8 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     return cell;
   }
 
-  function freshGrid(ctx) {
-    ctx.eggs = 0;
+  function freshGrid(ctx, preEggs = 0) {
+    ctx.eggs = preEggs;
     const g = [];
     for (let c = 0; c < COLS; c++) { g.push([]); for (let r = 0; r < ROWS; r++) g[c].push(newCell(ctx)); }
     return g;
@@ -515,12 +626,75 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
   const clusterPay = (sym, size) =>
     SYMBOLS[sym].pay * CURVE[Math.min(size - CONFIG.minCluster, CURVE.length - 1)] * CONFIG.payScale;
 
+  /* ---------- œufs : fêlure, éclosion, réaction en chaîne ---------- */
+
+  // queue : œufs à fêler. removed : cases qui vont disparaître. st.basket : Panier du tour.
+  function hatchEggs(ctx, grid, queue, removed, st) {
+    const events = [];
+    const table = PRIZES[ctx.mode];
+    const born = new Set();
+    while (queue.length) {
+      const [c, r] = queue.shift();
+      const egg = grid[c][r];
+      if (egg.s !== 'egg') continue;
+      egg.hp--;
+      if (egg.hp > 0) { events.push({ t: 'crack', c, r, id: egg.id, hp: egg.hp }); continue; }
+
+      const kind = pickWeighted(table.kinds, ctx.rng);
+      ctx.eggs--;
+      if (kind === 'mult') {
+        const v = pickWeighted(table.mult, ctx.rng);
+        st.basket += v;
+        egg.s = 'hatched';
+        removed.add(key(c, r));
+        events.push({ t: 'mult', c, r, id: egg.id, value: v, basket: st.basket });
+      } else if (kind === 'chick') {
+        egg.s = 'wild';
+        delete egg.hp; delete egg.sticky;
+        removed.delete(key(c, r));
+        born.add(key(c, r));
+        events.push({ t: 'chick', c, r, id: egg.id });
+      } else {
+        egg.s = 'hatched';
+        removed.add(key(c, r));
+        const blast = [];
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+          const nx = c + dx, ny = r + dy;
+          if (!inGrid(nx, ny) || (dx === 0 && dy === 0) || born.has(key(nx, ny)) || removed.has(key(nx, ny))) continue;
+          const s = grid[nx][ny].s;
+          if (s === 'egg') queue.push([nx, ny]);          // réaction en chaîne
+          else if (s !== 'barn') { removed.add(key(nx, ny)); blast.push([nx, ny]); }
+        }
+        events.push({ t: 'dyn', c, r, id: egg.id, blast, ids: blast.map(([x, y]) => grid[x][y].id) });
+      }
+    }
+    return events;
+  }
+
+  // Chute : on retire, tout tombe, on remplit par le haut.
+  function applyTumble(ctx, grid, removed) {
+    const gone = [];
+    const next = [];
+    for (let c = 0; c < COLS; c++) {
+      const kept = [];
+      for (let r = 0; r < ROWS; r++) {
+        if (removed.has(key(c, r))) { gone.push(grid[c][r].id); if (grid[c][r].s === 'egg') ctx.eggs--; }
+        else kept.push(grid[c][r]);
+      }
+      const add = [];
+      while (add.length + kept.length < ROWS) add.push(newCell(ctx));
+      next.push([...add, ...kept]);
+    }
+    for (let c = 0; c < COLS; c++) grid[c] = next[c];
+    ctx.steps.push({ type: 'tumble', gone, grid: snap(grid) });
+  }
+
   /* ---------- une dégringolade complète ---------- */
 
   // Joue la grille jusqu'à ce qu'il n'y ait plus de gain. Renvoie le gain (avant Panier) et le Panier.
-  function runSequence(ctx, grid) {
+  function runSequence(ctx, grid, basket0 = 0) {
     let win = 0;
-    let basket = 0;
+    const st = { basket: basket0 };
     let guard = 0;
     while (guard++ < CONFIG.maxSteps) {
       const clusters = findClusters(grid);
@@ -529,7 +703,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
       const removed = new Set();
       let stepWin = 0;
       const wins = clusters.map((cl) => {
-        const pay = round2(clusterPay(cl.sym, cl.size) * ctx.bet * (ctx.mode === 'base' ? 1 : CONFIG.fsPayScale));
+        const pay = round2(clusterPay(cl.sym, cl.size) * ctx.bet * (ctx.mode === 'base' ? 1 : CONFIG.fsPayScale * ctx.bonusPay));
         stepWin += pay;
         for (const [c, r] of cl.cells) removed.add(key(c, r));
         return { sym: cl.sym, size: cl.size, pay, cells: cl.cells, ids: cl.cells.map(([c, r]) => grid[c][r].id) };
@@ -538,7 +712,6 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
       ctx.steps.push({ type: 'win', clusters: wins, win: round2(stepWin), seqWin: round2(win) });
 
       // Les œufs touchés par une grappe (8 cases autour) se fêlent.
-      const events = [];
       const queue = [];
       const hit = new Set();
       for (const k of removed) {
@@ -548,64 +721,13 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
           if (inGrid(nx, ny) && grid[nx][ny].s === 'egg' && !hit.has(key(nx, ny))) { hit.add(key(nx, ny)); queue.push([nx, ny]); }
         }
       }
-      const table = PRIZES[ctx.mode];
-      const born = new Set();
-      while (queue.length) {
-        const [c, r] = queue.shift();
-        const egg = grid[c][r];
-        if (egg.s !== 'egg') continue;
-        egg.hp--;
-        if (egg.hp > 0) { events.push({ t: 'crack', c, r, id: egg.id, hp: egg.hp }); continue; }
+      const events = hatchEggs(ctx, grid, queue, removed, st);
+      if (events.length) ctx.steps.push({ type: 'eggs', events, basket: st.basket });
 
-        const kind = pickWeighted(table.kinds, ctx.rng);
-        ctx.eggs--;
-        if (kind === 'mult') {
-          const v = pickWeighted(table.mult, ctx.rng);
-          basket += v;
-          egg.s = 'hatched';
-          removed.add(key(c, r));
-          events.push({ t: 'mult', c, r, id: egg.id, value: v, basket });
-        } else if (kind === 'chick') {
-          egg.s = 'wild';
-          delete egg.hp;
-          removed.delete(key(c, r));
-          born.add(key(c, r));
-          events.push({ t: 'chick', c, r, id: egg.id });
-        } else {
-          egg.s = 'hatched';
-          removed.add(key(c, r));
-          const blast = [];
-          for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-            const nx = c + dx, ny = r + dy;
-            if (!inGrid(nx, ny) || (dx === 0 && dy === 0) || born.has(key(nx, ny)) || removed.has(key(nx, ny))) continue;
-            const s = grid[nx][ny].s;
-            if (s === 'egg') queue.push([nx, ny]);          // réaction en chaîne
-            else if (s !== 'barn') { removed.add(key(nx, ny)); blast.push([nx, ny]); }
-          }
-          events.push({ t: 'dyn', c, r, id: egg.id, blast, ids: blast.map(([x, y]) => grid[x][y].id) });
-        }
-      }
-      if (events.length) ctx.steps.push({ type: 'eggs', events, basket });
-
-      if (ctx.capped || ctx.total + win * Math.max(1, basket) >= CONFIG.maxWinX * ctx.bet) break;
-
-      // Chute : on retire, tout tombe, on remplit par le haut.
-      const gone = [];
-      const next = [];
-      for (let c = 0; c < COLS; c++) {
-        const kept = [];
-        for (let r = 0; r < ROWS; r++) {
-          if (removed.has(key(c, r))) { gone.push(grid[c][r].id); if (grid[c][r].s === 'egg') ctx.eggs--; }
-          else kept.push(grid[c][r]);
-        }
-        const add = [];
-        while (add.length + kept.length < ROWS) add.push(newCell(ctx));
-        next.push([...add, ...kept]);
-      }
-      for (let c = 0; c < COLS; c++) grid[c] = next[c];
-      ctx.steps.push({ type: 'tumble', gone, grid: snap(grid) });
+      if (ctx.capped || ctx.total + win * Math.max(1, st.basket) >= CONFIG.maxWinX * ctx.bet) break;
+      applyTumble(ctx, grid, removed);
     }
-    return { win: round2(win), basket };
+    return { win: round2(win), basket: st.basket };
   }
 
   /* ---------- Coco pond des œufs ---------- */
@@ -615,7 +737,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     const spots = [];
     for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) if (PAYING.includes(grid[c][r].s)) spots.push([c, r]);
     const n = Math.min(CONFIG.cocoEggs[0] + randInt(ctx.rng, CONFIG.cocoEggs[1] - CONFIG.cocoEggs[0] + 1),
-      Math.max(0, CONFIG.maxEggs - ctx.eggs));
+      Math.max(0, (ctx.maxEggs || CONFIG.maxEggs) - ctx.eggs));
     if (n <= 0) return;
     const eggs = shuffle(spots, ctx.rng).slice(0, n).map(([c, r]) => {
       const cell = makeCell(ctx, 'egg');
@@ -636,21 +758,83 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     }
   }
 
+  /* ---------- effets propres à chaque bonus ---------- */
+
+  function paySpots(grid) {
+    const spots = [];
+    for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) if (PAYING.includes(grid[c][r].s)) spots.push([c, r]);
+    return spots;
+  }
+  const between = (rng, [lo, hi]) => lo + randInt(rng, hi - lo + 1);
+
+  // Nid Collant : les œufs gardés du tour précédent reprennent leur place.
+  function placeSticky(ctx, grid, carry) {
+    for (const e of carry) {
+      if (grid[e.c][e.r].s === 'egg') ctx.eggs--;   // un œuf neuf recouvert par un œuf collant
+      grid[e.c][e.r] = e.cell;
+    }
+  }
+
+  // Poussins en Folie : des Wilds sautent sur la grille.
+  function dropChicks(ctx, grid, range) {
+    const cells = shuffle(paySpots(grid), ctx.rng).slice(0, between(ctx.rng, range)).map(([c, r]) => {
+      const cell = makeCell(ctx, 'wild');
+      grid[c][r] = cell;
+      return { c, r, cell: { ...cell } };
+    });
+    if (cells.length) ctx.steps.push({ type: 'chicks', cells, grid: snap(grid) });
+  }
+
+  // Pluie de Dynamite : explosions avant l'évaluation. Renvoie le Panier gagné.
+  function throwBombs(ctx, grid, range) {
+    const n = between(ctx.rng, range);
+    const removed = new Set();
+    const queue = [];
+    const bombs = [];
+    const centers = shuffle(paySpots(grid), ctx.rng).slice(0, n);
+    for (const [c, r] of centers) {
+      const blast = [];
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+        const nx = c + dx, ny = r + dy;
+        if (!inGrid(nx, ny) || removed.has(key(nx, ny))) continue;
+        const s = grid[nx][ny].s;
+        if (s === 'egg') { if (!queue.some(([x, y]) => x === nx && y === ny)) queue.push([nx, ny]); }
+        else if (s !== 'barn') { removed.add(key(nx, ny)); blast.push([nx, ny]); }
+      }
+      bombs.push({ c, r, blast, ids: blast.map(([x, y]) => grid[x][y].id) });
+    }
+    ctx.steps.push({ type: 'bombs', bombs });
+    const st = { basket: 0 };
+    const events = hatchEggs(ctx, grid, queue, removed, st);
+    if (events.length) ctx.steps.push({ type: 'eggs', events, basket: st.basket });
+    applyTumble(ctx, grid, removed);
+    return st.basket;
+  }
+
   /* ---------- tours gratuits ---------- */
 
-  function freeSpins(ctx, spins) {
+  function freeSpins(ctx, kind, spins) {
+    const B = BONUSES[kind];
     const prevMode = ctx.mode;
+    ctx.mode = B.mode;
+    ctx.maxEggs = B.maxEggs || CONFIG.maxEggs;
+    ctx.bonusPay = B.pay;
     let left = spins;
     let index = 0;
     let totalMult = 0;
+    let carry = [];
     const start = ctx.total;
-    ctx.steps.push({ type: 'fsStart', spins, mode: ctx.mode });
+    ctx.steps.push({ type: 'fsStart', kind, name: B.name, spins, mode: B.mode });
     while (left > 0 && !ctx.capped) {
       left--; index++;
-      const grid = freshGrid(ctx);
-      ctx.steps.push({ type: 'fsSpin', index, left, totalMult, grid: snap(grid) });
+      if (!B.keep) totalMult = 0;
+      const grid = freshGrid(ctx, carry.length);
+      if (B.sticky) placeSticky(ctx, grid, carry);
+      ctx.steps.push({ type: 'fsSpin', kind, index, left, totalMult, grid: snap(grid) });
       cocoLays(ctx, grid, CONFIG.cocoChanceFs);
-      const seq = runSequence(ctx, grid);
+      if (B.wilds) dropChicks(ctx, grid, B.wilds);
+      const pre = B.bombs ? throwBombs(ctx, grid, B.bombs) : 0;
+      const seq = runSequence(ctx, grid, pre);
       let w = seq.win;
       totalMult += seq.basket;
       if (totalMult > 0 && w > 0) {
@@ -659,6 +843,13 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
         w = mw;
       }
       addWin(ctx, w);
+      if (B.sticky) {
+        carry = [];
+        for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
+          const x = grid[c][r];
+          if (x.s === 'egg') { x.sticky = true; carry.push({ c, r, cell: x }); }
+        }
+      }
       ctx.steps.push({ type: 'fsSpinEnd', win: w, fsWin: round2(ctx.total - start), totalMult });
       const barns = countOf(grid, 'barn');
       if (barns >= CONFIG.retriggerNeed && !ctx.capped) {
@@ -666,14 +857,22 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
         ctx.steps.push({ type: 'retrigger', barns, add: CONFIG.retriggerSpins, left });
       }
     }
-    ctx.steps.push({ type: 'fsEnd', win: round2(ctx.total - start), spins: index, totalMult });
+    ctx.steps.push({ type: 'fsEnd', kind, name: B.name, win: round2(ctx.total - start), spins: index, totalMult });
     ctx.mode = prevMode;
+    ctx.maxEggs = CONFIG.maxEggs;
+  }
+
+  // Bonus déclenché par les Granges en jeu normal : le plus haut palier atteint.
+  function bonusForBarns(n) {
+    let best = null;
+    for (const [k, b] of Object.entries(BONUSES)) if (b.barns && n >= b.barns && (!best || b.barns > BONUSES[best].barns)) best = k;
+    return best;
   }
 
   /* ---------- API ---------- */
 
   function newCtx(bet, rng, opts) {
-    return { rng, bet, mode: 'base', ante: !!(opts && opts.ante), nextId: 1, eggs: 0, steps: [], total: 0, capped: false };
+    return { rng, bet, mode: 'base', ante: !!(opts && opts.ante), nextId: 1, eggs: 0, maxEggs: CONFIG.maxEggs, bonusPay: 1, steps: [], total: 0, capped: false };
   }
 
   function result(ctx, cost, bonus) {
@@ -700,11 +899,10 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     let bonus = false;
     if (barns >= CONFIG.scatterNeed && !ctx.capped) {
       const pay = round2((CONFIG.scatterPay[Math.min(barns, 6)] || 0) * bet);
-      ctx.steps.push({ type: 'scatter', barns, pay, spins: CONFIG.freeSpins });
+      ctx.steps.push({ type: 'scatter', barns, pay, kind: bonusForBarns(barns), spins: BONUSES[bonusForBarns(barns)].spins });
       addWin(ctx, pay);
-      bonus = true;
-      ctx.mode = 'fs';
-      freeSpins(ctx, CONFIG.freeSpins);
+      bonus = bonusForBarns(barns);
+      freeSpins(ctx, bonus, BONUSES[bonus].spins);
     }
     ctx.steps.push({ type: 'end', win: round2(ctx.total) });
     return result(ctx, cost, bonus);
@@ -712,13 +910,12 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 
   // Achat direct des tours gratuits.
   function buyBonus(kind, bet, rng) {
-    const b = BONUS_BUYS[kind];
+    const b = BONUSES[kind];
     const ctx = newCtx(bet, rng);
-    ctx.mode = b.mode;
     ctx.steps.push({ type: 'buy', kind, name: b.name });
-    freeSpins(ctx, CONFIG.freeSpins);
+    freeSpins(ctx, kind, b.spins);
     ctx.steps.push({ type: 'end', win: round2(ctx.total) });
-    return result(ctx, round2(bet * b.cost), true);
+    return result(ctx, round2(bet * b.cost), kind);
   }
 
   function mulberry32(seed) {
@@ -732,7 +929,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     };
   }
 
-  const api = { COLS, ROWS, CONFIG, SYMBOLS, PAYING, CURVE, PRIZES, BONUS_BUYS, spin, buyBonus, randomGrid, findClusters, clusterPay, mulberry32 };
+  const api = { COLS, ROWS, CONFIG, SYMBOLS, PAYING, CURVE, PRIZES, EGG_HP, BONUSES, BONUS_BUYS, bonusForBarns, spin, buyBonus, randomGrid, findClusters, clusterPay, mulberry32 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CocoEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -881,6 +1078,26 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
       <circle cx="55" cy="78" r="2" fill="#e7c98f"/>
       ${shine('M32 30 C26 40 24 52 25 60 C29 48 33 38 40 28Z')}`,
 
+    nestbase: `
+      <path d="M8 70 C10 92 90 92 92 70 C80 80 20 80 8 70Z" fill="#c98a4b" ${S}/>
+      <path d="M12 74 L30 84 M24 72 L44 88 M40 76 L58 88 M56 74 L74 86 M72 72 L88 80 M20 84 L36 76 M50 88 L66 76" stroke="#8a5528" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M8 70 C20 62 80 62 92 70" fill="none" stroke="#e3b16a" stroke-width="5" stroke-linecap="round"/>`,
+
+    nest: `
+      <path d="M50 14 C66 14 76 40 76 54 C76 70 64 78 50 78 C36 78 24 70 24 54 C24 40 34 14 50 14Z" fill="#fff4dc" ${S}/>
+      <circle cx="42" cy="36" r="2.5" fill="#e7c98f"/><circle cx="60" cy="48" r="3" fill="#e7c98f"/>
+      ${shine('M34 30 C30 38 29 46 30 52 C33 44 36 36 41 30Z')}
+      <path d="M6 62 C8 94 92 94 94 62 C80 74 20 74 6 62Z" fill="#c98a4b" ${S}/>
+      <path d="M12 70 L30 82 M24 68 L44 86 M42 72 L58 86 M58 70 L74 84 M72 68 L88 76 M20 82 L36 72" stroke="#8a5528" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M6 62 C20 54 80 54 94 62" fill="none" stroke="#e3b16a" stroke-width="5" stroke-linecap="round"/>`,
+
+    golden: `
+      <path d="M50 8 C72 8 84 44 84 62 C84 82 68 93 50 93 C32 93 16 82 16 62 C16 44 28 8 50 8Z" fill="#ffcf2e" ${S}/>
+      <path d="M50 20 C64 22 74 48 74 62 C74 76 64 84 50 84" fill="none" stroke="#f0a800" stroke-width="5" stroke-linecap="round"/>
+      ${shine('M32 30 C26 40 24 52 25 60 C29 48 33 38 40 28Z')}
+      <path d="M80 10 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3Z M14 22 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2Z" fill="#fff" stroke="${O}" stroke-width="2" stroke-linejoin="round"/>
+      <text x="50" y="68" text-anchor="middle" font-family="Luckiest Guy, Impact, sans-serif" font-size="22" fill="#fff" stroke="${O}" stroke-width="1.5">×5+</text>`,
+
     crack1: `<path d="M20 50 L32 46 L38 54 L48 46 L54 52" fill="none" stroke="${O}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`,
     crack2: `<path d="M16 56 L28 48 L36 58 L46 46 L56 56 L64 44 L72 52 L84 50" fill="none" stroke="${O}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
       <path d="M46 46 L44 34 L50 26 M56 56 L60 68 L54 76" fill="none" stroke="${O}" stroke-width="2.5" stroke-linecap="round"/>`,
@@ -1028,12 +1245,12 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 
   function crackHTML(hp) { return hp >= 3 ? '' : A.use(hp === 2 ? 'crack1' : 'crack2'); }
   function symHTML(cell) {
-    if (cell.s === 'egg') return `<div class="sym">${A.use('egg')}<div class="crack">${crackHTML(cell.hp)}</div></div>`;
+    if (cell.s === 'egg') return `${cell.sticky ? `<div class="nestbase">${A.use('nestbase')}</div>` : ''}<div class="sym">${A.use('egg')}<div class="crack">${crackHTML(cell.hp)}</div></div>`;
     return `<div class="sym">${A.use(cell.s)}</div>`;
   }
   function makeEl(cell) {
     const el = document.createElement('div');
-    el.className = 'cell ' + cell.s;
+    el.className = 'cell ' + cell.s + (cell.sticky ? ' sticky' : '');
     el.innerHTML = symHTML(cell);
     board.appendChild(el);
     els.set(k(cell.id), el);
@@ -1048,16 +1265,39 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     for (const el of list) { el.classList.remove('landed'); reflow(el); el.classList.add('landed'); }
   }
 
+  // Chute colonne par colonne : chaque colonne tombe d'un bloc (accélération), puis fait un mini rebond.
+  const COL_GAP = 105, FALL = 340;
+  function fallColumns(items, gap = COL_GAP) {
+    const cols = [...new Set(items.map((m) => m[1]))].sort((a, b) => a - b);
+    cols.forEach((c, i) => {
+      const list = items.filter((m) => m[1] === c);
+      for (const [el, , r] of list) {
+        el.classList.remove('no-anim');
+        el.style.transitionTimingFunction = 'cubic-bezier(.45,0,.9,.55)';
+        el.style.transitionDuration = FALL / spd() + 'ms';
+        el.style.transitionDelay = (i * gap) / spd() + 'ms';
+        place(el, c, r);
+      }
+      setTimeout(() => {
+        sfx.land(c);
+        for (const [el] of list) { el.style.transitionDelay = ''; el.style.transitionDuration = ''; el.style.transitionTimingFunction = ''; }
+        land(list.map((m) => m[0]));
+      }, (i * gap + FALL) / spd());
+    });
+    return wait(Math.max(0, cols.length - 1) * gap + FALL + 260);
+  }
+
   async function dropGrid(grid, first) {
     const old = [...board.querySelectorAll('.cell')];
     if (old.length && !first) {
       sfx.whoosh();
       for (const el of old) {
         el.style.transitionTimingFunction = 'cubic-bezier(.5,0,.9,.4)';
-        el.style.transitionDelay = (+el.dataset.c * 35) / spd() + 'ms';
+        el.style.transitionDuration = FALL / spd() + 'ms';
+        el.style.transitionDelay = (+el.dataset.c * 60) / spd() + 'ms';
         place(el, +el.dataset.c, +el.dataset.r + ROWS + 1);
       }
-      await wait(330 + COLS * 35);
+      await wait(FALL + (COLS - 1) * 60);
     }
     old.forEach((el) => el.remove());
     els.clear();
@@ -1065,19 +1305,11 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
       const el = makeEl(grid[c][r]);
       el.classList.add('no-anim');
-      place(el, c, r - ROWS - 1);
+      place(el, c, r - ROWS - 0.5);
       fresh.push([el, c, r]);
     }
     reflow(board);
-    for (const [el, c, r] of fresh) {
-      el.classList.remove('no-anim');
-      el.style.transitionDelay = (c * 55 + (ROWS - r) * 14) / spd() + 'ms';
-      place(el, c, r);
-    }
-    for (let c = 0; c < COLS; c++) setTimeout(() => sfx.land(c), (c * 55 + 300) / spd());
-    await wait(380 + COLS * 55 + ROWS * 14);
-    for (const [el] of fresh) el.style.transitionDelay = '';
-    land(fresh.map((f) => f[0]));
+    await fallColumns(fresh);
   }
 
   async function tumble(step) {
@@ -1106,14 +1338,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
       }
     }
     reflow(board);
-    for (const [el, c, r] of moved) {
-      el.classList.remove('no-anim');
-      el.style.transitionDelay = (c * 25) / spd() + 'ms';
-      place(el, c, r);
-    }
-    if (moved.length) { sfx.land(2); await wait(420 + COLS * 25); }
-    for (const [el] of moved) el.style.transitionDelay = '';
-    land(moved.map((m) => m[0]));
+    if (moved.length) await fallColumns(moved, 70);
   }
 
   /* ---------- petits effets ---------- */
@@ -1186,10 +1411,11 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
   }
 
   /* ---------- fenêtres ---------- */
-  function overlay(html, { autoMs = 0, dismiss = true } = {}) {
+  function overlay(html, { autoMs = 0, dismiss = true, wide = false } = {}) {
     return new Promise((resolve) => {
       const ov = $('overlay'), card = $('overlayCard');
       card.innerHTML = html;
+      card.classList.toggle('wide', wide);
       ov.hidden = false;
       let done = false;
       const close = (v) => { if (done) return; done = true; ov.hidden = true; resolve(v); };
@@ -1349,7 +1575,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 
     async scatter(s) {
       for (const el of board.querySelectorAll('.cell.barn')) el.classList.add('glow');
-      sfx.fanfare(); coco('happy'); say('LA GRANGE!', 1800);
+      sfx.fanfare(); coco('happy'); say(s.kind === 'super' ? 'SUPER GRANGE!' : 'LA GRANGE!', 1800);
       runBase = runBase + seqVal + s.pay; seqVal = 0;
       showWin(runBase);
       await wait(1500);
@@ -1358,15 +1584,64 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     async buy() { runBase = 0; seqVal = 0; },
 
     async fsStart(s) {
-      const sup = s.mode === 'super';
-      await overlay(`<h2 class="red">${sup ? 'SUPER GRANGE!' : 'LA GRANGE EN FOLIE!'}</h2>
+      const B = E.BONUSES[s.kind];
+      await overlay(`<div class="bonus-intro">${A.use(B.icon, 'intro-ico')}
+        <h2 class="red">${B.name.toUpperCase()}!</h2>
         <div class="big">${s.spins} tours gratuits</div>
-        <p>Le Panier ne se vide plus : chaque multiplicateur s'ajoute et multiplie tous les gains suivants.${sup ? ' Œufs en pagaille, multiplicateurs ×5 minimum.' : ''}</p>
-        <button class="go" data-v="go">C'est parti !</button>`, { autoMs: state.auto ? 2500 : 0, dismiss: false });
-      state.fs = true; state.fsTotal = 0; fsBase = runBase;
-      document.body.classList.add('fs');
+        <p>${B.desc}</p>
+        <p class="note">${B.keep ? 'Panier persistant : les multiplicateurs s\'additionnent pendant tout le bonus.' : 'Le Panier repart de zéro à chaque tour.'}</p>
+        <button class="go" data-v="go">C'est parti !</button></div>`, { autoMs: state.auto ? 2500 : 0, dismiss: false });
+      state.fs = true; state.fsTotal = 0; state.fsKeep = !!B.keep; fsBase = runBase;
+      document.body.classList.add('fs', 'fs-' + s.kind);
       $('fsBox').hidden = false; $('fsLeft').textContent = s.spins;
+      $('fsName').textContent = B.name;
       setBasket(0);
+    },
+
+    async chicks(s) {
+      say('PIOU PIOU!', 1200); sfx.chick();
+      for (const e of s.cells) {
+        const old = [...board.querySelectorAll('.cell')].find((el) => +el.dataset.c === e.c && +el.dataset.r === e.r);
+        if (old) { old.classList.add('pop'); setTimeout(() => old.remove(), 250 / spd()); for (const [kk, v] of els) if (v === old) els.delete(kk); }
+        const el = makeEl(e.cell);
+        el.classList.add('no-anim'); place(el, e.c, -1.2); reflow(el);
+        el.classList.remove('no-anim'); place(el, e.c, e.r);
+        setTimeout(() => {
+          land([el]); sfx.boing();
+          const [x, y] = center(e.c, e.r);
+          puff(x, y); word('PIOU!', x, y - cellPx() * 0.4, '', 0.4);
+        }, 380 / spd());
+        await wait(300);
+      }
+      await wait(500);
+    },
+
+    async bombs(s) {
+      coco('scared'); say('ATTENTION!', 1200);
+      const sticks = s.bombs.map((b) => {
+        const [x, y] = center(b.c, b.r);
+        const d = document.createElement('div');
+        d.className = 'dyn falling';
+        d.innerHTML = A.use('dynamite') + `<div class="sp">${A.use('spark')}</div>`;
+        d.style.left = x + 'px'; d.style.top = y + 'px';
+        fx.appendChild(d);
+        return [d, x, y, b];
+      });
+      sfx.fuse();
+      await wait(900);
+      for (const [d, x, y, b] of sticks) {
+        d.remove();
+        const bo = document.createElement('div');
+        bo.className = 'boom'; bo.innerHTML = A.use('burst');
+        bo.style.left = x + 'px'; bo.style.top = y + 'px';
+        fx.appendChild(bo);
+        setTimeout(() => bo.remove(), 700 / spd());
+        word('BOUM!', x, y, 'red', 0.8);
+        sfx.boom(); shakeBoard();
+        for (const id of b.ids) { const t = els.get(k(id)); if (t) t.classList.add('charred'); }
+        await wait(380);
+      }
+      await wait(250);
     },
 
     async fsSpin(s) {
@@ -1395,9 +1670,9 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 
     async fsEnd(s) {
       await overlay(`<h2>TOTAL GAGNÉ</h2><div class="big">${fmt(s.win)}</div>
-        <p>${s.spins} tours gratuits, Panier final ×${s.totalMult}.</p><button class="go" data-v="go">Super !</button>`, { autoMs: state.auto ? 2500 : 0 });
+        <p>${s.name} : ${s.spins} tours gratuits${E.BONUSES[s.kind].keep ? `, Panier final ×${s.totalMult}` : ''}.</p><button class="go" data-v="go">Super !</button>`, { autoMs: state.auto ? 2500 : 0 });
       state.fs = false; state.fsTotal = 0;
-      document.body.classList.remove('fs');
+      document.body.className = '';
       $('fsBox').hidden = true;
       setBasket(0);
     },
@@ -1496,37 +1771,114 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
     if (!state.busy) spinOnce();
   };
 
+  const pct = (x) => Math.round(x).toLocaleString('fr-CH') + ' %';
+
   $('buyBtn').onclick = async () => {
     if (state.busy) return;
     audio();
     const b = bet();
-    const cards = Object.entries(E.BONUS_BUYS).map(([kind, v]) => {
+    const cards = Object.entries(E.BONUSES).map(([kind, v], i) => {
       const price = v.cost * b;
-      return `<div class="buycard"><svg viewBox="0 0 100 100" width="70" height="70"><use href="#s-${kind === 'super' ? 'egg' : 'barn'}"/></svg>
-        <h3>${v.name}</h3><p>${v.desc}</p><div class="price">${fmt(price)}</div><p>${v.cost}× la mise</p>
-        <button class="go" data-v="${kind}" ${state.balance < price ? 'disabled' : ''}>Acheter</button></div>`;
+      return `<div class="buycard tier${i}">
+        <div class="tag-price">${v.cost}×</div>
+        ${A.use(v.icon, 'buy-ico')}
+        <h3>${v.name}</h3>
+        <p class="short">${v.short}</p>
+        <p class="spins">${v.spins} tours gratuits · ${v.keep ? 'Panier persistant' : 'Panier par tour'}</p>
+        <button class="go" data-v="${kind}" ${state.balance < price ? 'disabled' : ''}>${fmt(price)}</button>
+      </div>`;
     }).join('');
-    const kind = await overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button><h2 class="red">Acheter le bonus</h2>
-      <div class="row">${cards}</div>`);
-    if (kind && E.BONUS_BUYS[kind]) play(() => E.buyBonus(kind, b, rng), E.BONUS_BUYS[kind].cost * b);
+    const kind = await overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button>
+      <h2 class="red">Acheter un bonus</h2>
+      <p>Prix pour une mise de ${fmt(b)}. Chaque bonus rend environ 96 % de son prix en moyenne.</p>
+      <div class="buygrid">${cards}</div>`, { wide: true });
+    if (kind && E.BONUSES[kind]) play(() => E.buyBonus(kind, b, rng), E.BONUSES[kind].cost * b);
   };
 
-  $('infoBtn').onclick = () => {
+  function rulesHTML(tab) {
     const b = bet();
-    const pays = E.PAYING.slice().reverse().map((s) => `<div class="pay">${A.use(s)}<b>${E.SYMBOLS[s].name}</b>
-      ${[5, 8, 10, 15].map((n) => `<div><span>${n}${n === 15 ? '+' : ''}</span><span>${fmt(E.clusterPay(s, n) * b)}</span></div>`).join('')}</div>`).join('');
-    overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button><h2>Règles et gains</h2>
-      <p>Gains pour une mise de ${fmt(b)}. On gagne avec une grappe de 5 symboles identiques ou plus qui se touchent (haut, bas, gauche, droite).</p>
-      <div class="paytable">${pays}</div>
-      <ul class="rules">
-        <li><b>Dégringolade :</b> les grappes gagnantes explosent, tout tombe, de nouveaux symboles arrivent. On continue tant qu'il y a des gains.</li>
-        <li><b>Coco</b> traverse parfois la grille et pond 2 à 4 œufs.</li>
-        <li><b>Œufs :</b> chaque grappe qui explose à côté d'un œuf le fêle. Après 1 à 3 coups, il éclot : <b>multiplicateur</b> ×2 à ×500 (dans le Panier), <b>Poussin Wild</b> (joker), ou <b>dynamite</b> qui fait sauter 3×3 cases et fêle les œufs voisins.</li>
-        <li><b>Panier :</b> les multiplicateurs s'additionnent et multiplient le gain du tour.</li>
-        <li><b>4 Granges</b> ou plus : 10 tours gratuits « La Grange en Folie » (4 : ×3, 5 : ×5, 6 : ×100 la mise). Le Panier ne se vide plus. 3 Granges pendant le bonus : +5 tours.</li>
-        <li><b>Double Chance :</b> la mise coûte ×1,25 et le bonus arrive environ 1,5× plus souvent.</li>
-        <li>Gain maximum : ×${E.CONFIG.maxWinX.toLocaleString('fr-CH')} la mise. RTP théorique ≈ 96 %. Crédits fictifs, démonstration uniquement.</li>
-      </ul>`);
+    const sizes = [5, 6, 7, 8, 9, 10, 12, 15];
+    const T = {
+      gains: `
+        <p class="lead">Une <b>grappe</b> = 5 symboles identiques ou plus qui se touchent par un côté (haut, bas, gauche, droite). Les diagonales ne comptent pas. Montants pour une mise de <b>${fmt(b)}</b>.</p>
+        <div class="demo" aria-hidden="true">${[1,1,0,0,0, 0,1,1,0,0, 0,0,1,0,0].map((x) => `<i class="${x ? 'on' : ''}"></i>`).join('')}<span>= grappe de 5, elle paie</span></div>
+        <div class="tablewrap"><table class="paytab">
+          <thead><tr><th>Symbole</th>${sizes.map((n) => `<th>${n}${n === 15 ? '+' : ''}</th>`).join('')}</tr></thead>
+          <tbody>${E.PAYING.slice().reverse().map((sym, i) => `<tr class="${i === 0 ? 'top' : ''}">
+            <th>${A.use(sym, 'tab-ico')}<span>${E.SYMBOLS[sym].name}</span></th>
+            ${sizes.map((n) => `<td>${fmt(E.clusterPay(sym, n) * b)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>
+        <p class="small">Tous les gains d'une même mise s'additionnent. Les grappes gagnantes explosent, tout tombe, de nouveaux symboles arrivent : c'est la <b>dégringolade</b>, qui continue tant qu'il y a des gains. Pendant les bonus, les gains des grappes sont plus élevés.</p>`,
+
+      oeufs: `
+        <div class="specials">
+          <div class="sp-card">${A.use('wild', 'sp-ico')}<h4>Poussin Wild</h4><p>Remplace n'importe quel symbole pour compléter une grappe. Il peut servir à plusieurs grappes à la fois.</p></div>
+          <div class="sp-card">${A.use('barn', 'sp-ico')}<h4>Grange</h4><p>4 Granges : La Grange en Folie. 5 ou plus : Super Grange. Elles paient aussi 4 : ×3, 5 : ×5, 6+ : ×100 la mise.</p></div>
+          <div class="sp-card">${COCO_MINI}<h4>Coco pond</h4><p>Environ une mise sur 8, Coco traverse la grille et pond 2 à 4 œufs.</p></div>
+        </div>
+        <h3 class="sub">Les œufs</h3>
+        <div class="egg-steps">
+          <div>${A.use('egg', 'sp-ico')}<b>Intact</b><small>3 coups</small></div><span>→</span>
+          <div class="cr">${A.use('egg', 'sp-ico')}<div>${A.use('crack1', 'sp-ico')}</div><b>Fêlé</b><small>2 coups</small></div><span>→</span>
+          <div class="cr">${A.use('egg', 'sp-ico')}<div>${A.use('crack2', 'sp-ico')}</div><b>Prêt à éclore</b><small>1 coup</small></div>
+        </div>
+        <p>Chaque fois qu'une grappe gagnante explose <b>à côté</b> d'un œuf (diagonales comprises), l'œuf se fêle. Quand il éclot, il donne :</p>
+        <table class="odds">
+          <thead><tr><th>Surprise</th><th>Jeu normal</th><th>Bonus</th><th>Super Grange</th></tr></thead>
+          <tbody>
+            ${[['mult', 'burst', 'Multiplicateur', 'va dans le Panier'], ['chick', 'wild', 'Poussin Wild', 'reste sur la grille'], ['dyn', 'dynamite', 'Dynamite', 'explose en 3×3, fêle les œufs voisins']].map(([key, ico, name, what]) => {
+              const odds = ['base', 'fs', 'super'].map((m) => { const t = E.PRIZES[m].kinds; const tot = t.reduce((a, x) => a + x[1], 0); return pct(100 * t.find((x) => x[0] === key)[1] / tot); });
+              return `<tr><th>${A.use(ico, 'tab-ico')}<span>${name}<small>${what}</small></span></th>${odds.map((o) => `<td>${o}</td>`).join('')}</tr>`;
+            }).join('')}
+            <tr><th colspan="1"><span>Valeurs des multiplicateurs</span></th>${['base', 'fs', 'super'].map((m) => { const v = E.PRIZES[m].mult.map((x) => x[0]); return `<td>×${v[0]} à ×${v[v.length - 1]}</td>`; }).join('')}</tr>
+          </tbody>
+        </table>
+        <h3 class="sub">Le Panier</h3>
+        <p>Les multiplicateurs éclos pendant une mise s'<b>additionnent</b> dans le Panier (×2 + ×5 = ×7). À la fin de la dégringolade, le gain de la mise est multiplié par le Panier. Dans les bonus à Panier persistant, il ne se vide jamais et multiplie chaque tour gagnant.</p>`,
+
+      bonus: `
+        <p class="lead">5 bonus, du moins cher au plus cher. Prix pour une mise de <b>${fmt(b)}</b>.</p>
+        <div class="bonus-list">${Object.entries(E.BONUSES).map(([kind, v], i) => `
+          <div class="bl tier${i}">
+            ${A.use(v.icon, 'bl-ico')}
+            <div class="bl-main"><h4>${v.name}</h4><p>${v.desc}</p>
+              <div class="chips"><span>${v.spins} tours</span><span>${v.keep ? 'Panier persistant' : 'Panier par tour'}</span>${v.barns ? `<span class="hot">${v.barns === 4 ? '4 Granges' : v.barns + '+ Granges'}</span>` : '<span>achat seulement</span>'}</div>
+            </div>
+            <div class="bl-price"><b>${v.cost}×</b><small>${fmt(v.cost * b)}</small></div>
+          </div>`).join('')}
+        </div>
+        <p class="small">Pendant tous les bonus : 3 Granges ou plus rajoutent <b>+${E.CONFIG.retriggerSpins} tours</b>. Les œufs y sont plus nombreux et plus fragiles.</p>`,
+
+      infos: `
+        <table class="facts"><tbody>
+          <tr><th>RTP (retour au joueur)</th><td>≈ 96 %</td></tr>
+          <tr><th>RTP de chaque bonus acheté</th><td>≈ 96 %</td></tr>
+          <tr><th>Gain maximum</th><td>×${E.CONFIG.maxWinX.toLocaleString('fr-CH')} la mise</td></tr>
+          <tr><th>Volatilité</th><td>Élevée</td></tr>
+          <tr><th>Mises gagnantes</th><td>≈ 27 % (1 sur 4)</td></tr>
+          <tr><th>Bonus naturel</th><td>≈ 1 mise sur 300</td></tr>
+          <tr><th>Double Chance</th><td>Mise ×${E.CONFIG.anteCost.toLocaleString('fr-CH')}, bonus ≈ 1 mise sur 185</td></tr>
+          <tr><th>Grille</th><td>${COLS} colonnes × ${ROWS} lignes, grappes de 5+</td></tr>
+        </tbody></table>
+        <h3 class="sub">Commandes</h3>
+        <ul class="keys"><li><kbd>Espace</kbd> lance un tour</li><li>Cliquer sur la grille pendant un tour l'accélère</li><li><b>Turbo</b> : animations 2× plus rapides</li><li><b>Auto</b> : 50 tours automatiques (cliquer pour arrêter)</li></ul>
+        <p class="small">Démonstration en crédits fictifs. Si le gain d'une mise atteint le maximum, la mise s'arrête et le gain est plafonné. Une panne annule toutes les mises et tous les gains.</p>`,
+    };
+    const tabs = [['gains', 'Gains'], ['oeufs', 'Œufs & Coco'], ['bonus', 'Les 5 bonus'], ['infos', 'Infos']];
+    return `<button class="round close" data-v="" aria-label="Fermer">×</button><h2>Règles du jeu</h2>
+      <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" data-tab="${id}" aria-selected="${id === tab}">${label}</button>`).join('')}</div>
+      <div class="tabbody">${T[tab]}</div>`;
+  }
+  const COCO_MINI = `<div class="sp-ico coco-mini">${A.COCO}</div>`;
+
+  $('infoBtn').onclick = () => {
+    const show = (tab) => {
+      $('overlayCard').innerHTML = rulesHTML(tab);
+      $('overlayCard').querySelectorAll('[data-tab]').forEach((t) => t.addEventListener('click', () => show(t.dataset.tab)));
+      $('overlayCard').querySelector('.close').addEventListener('click', () => { $('overlay').hidden = true; });
+    };
+    overlay('', { wide: true });
+    show('gains');
   };
 
   /* ---------- taille du plateau ---------- */
@@ -1553,8 +1905,7 @@ button:disabled, .plank.off { opacity: .5; pointer-events: none; }
 
   // Pour tester depuis la console : coco.bonus(), coco.super()
   window.coco = {
-    bonus: () => play(() => E.buyBonus('grange', bet(), rng), 0),
-    super: () => play(() => E.buyBonus('super', bet(), rng), 0),
+    bonus: (kind = 'grange') => play(() => E.buyBonus(kind, bet(), rng), 0),
     replay: (r) => play(() => r, 0),
     eggs: () => { let r; do r = E.spin(bet(), rng); while (!r.steps.some((s) => s.type === 'coco')); play(() => r, bet()); },
   };

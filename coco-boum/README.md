@@ -13,31 +13,36 @@ Les images finales se commandent avec le prompt `PROMPT_CHATGPT.md`.
 - `simulate.js` : mesure du RTP avec le même moteur.
 
 ## Le concept
-- Grille **7×6**, gains par **grappes de 5+ symboles** qui se touchent, avec dégringolades.
+- Grille **7×6**, gains par **grappes de 5+ symboles** qui se touchent, avec dégringolades. Les symboles tombent colonne par colonne et font un petit rebond.
 - **Coco**, une poule complètement folle, traverse parfois la grille et **pond des œufs** (≈ 1 mise sur 8).
 - Chaque grappe qui explose à côté d'un œuf le **fêle** (1 à 3 coups). À l'éclosion, surprise :
-  - 🥚 **Multiplicateur** ×2 à ×100 (jusqu'à ×500 en bonus) qui va dans le **Panier** et multiplie le gain du tour ;
+  - 🥚 **Multiplicateur** ×2 à ×100 (jusqu'à ×500 en bonus) qui va dans le **Panier** et multiplie le gain de la mise ;
   - 🐤 **Poussin Wild** (joker) ;
   - 🧨 **Dynamite** : explosion 3×3, qui fêle les œufs voisins (**réaction en chaîne**).
-- 4 **Granges** = **La Grange en Folie** : 10 tours gratuits, le **Panier ne se vide jamais** et multiplie chaque gain. 3 Granges = +5 tours.
-- **Double Chance** (mise ×1,25) : bonus environ 1,5× plus fréquent.
+- **Double Chance** (mise ×1,25) : bonus plus fréquent.
 - Gain max : **×10 000** la mise.
 
-## Mathématiques (réglages `CONFIG` dans engine.js)
-| Mesure | Valeur (simulation) |
+## Les 5 bonus
+| Prix | Bonus | Tours | Particularité | Obtention |
+|---|---|---|---|---|
+| 10× | Poussins en Folie | 5 | 1 à 2 Poussins Wild par tour | achat |
+| 20× | Nid Collant | 6 | les œufs restent d'un tour à l'autre (jusqu'à 12) | achat |
+| 50× | Pluie de Dynamite | 8 | 1 à 3 dynamites au début de chaque tour | achat |
+| 100× | La Grange en Folie | 10 | Panier persistant | 4 Granges ou achat |
+| 200× | Super Grange | 10 | Panier persistant, œufs en pagaille, ×5 minimum | 5+ Granges ou achat |
+
+Pendant tous les bonus, 3 Granges rajoutent 5 tours. Chaque bonus a un réglage `pay` (dans `BONUSES`, engine.js) calé pour que son achat rende ≈ 96 %.
+
+## Mathématiques (simulation)
+| Mesure | Valeur |
 |---|---|
-| RTP | ≈ 96 % (± 1 %, jeu très volatil) |
+| RTP jeu normal | ≈ 96 % (± 1 %, jeu très volatil) |
+| RTP Double Chance | ≈ 96 % |
+| RTP de chaque bonus acheté | ≈ 96 % |
 | Fréquence de gain | ≈ 27 % |
-| Répartition | ≈ 60 % jeu de base, ≈ 36 % bonus |
-| Grange en Folie | ≈ 1 mise sur 257, gain moyen ≈ ×93 |
-| Double Chance | RTP ≈ 96 %, bonus ≈ 1 mise sur 167 |
+| Bonus naturel | ≈ 1 mise sur 300 (1 sur 185 en Double Chance) |
 
-| Achat de bonus | Prix | RTP (simulation) |
-|---|---|---|
-| La Grange en Folie | 100× la mise | ≈ 96 % |
-| Super Grange (œufs plus nombreux, multiplicateurs ×5 minimum) | 370× la mise | ≈ 96 % |
+Mesurer : `node simulate.js 1000000 1`, `node simulate.js 1000000 1 --ante`, `node simulate.js --buy chicks|sticky|dynamite|grange|super 30000`.
+`payScale` règle le jeu de base, `fsPayScale` tous les bonus, `pay` chaque bonus.
 
-Mesurer : `node simulate.js 1000000 1`, `node simulate.js 1000000 1 --ante`, `node simulate.js --buy grange|super 20000`.
-`payScale` règle le jeu de base, `fsPayScale` le bonus.
-
-Crédits fictifs uniquement. Avant une vraie publication : résultats tirés par le serveur du casino (RGS), RTP vérifié sur des centaines de millions de tours puis certifié.
+Crédits fictifs uniquement. Avant une vraie publication : résultats tirés par le serveur du casino (RGS), RTP vérifié sur des centaines de millions de tours puis certifié. L'achat de bonus est interdit dans certains pays.

@@ -84,12 +84,12 @@
 
   function crackHTML(hp) { return hp >= 3 ? '' : A.use(hp === 2 ? 'crack1' : 'crack2'); }
   function symHTML(cell) {
-    if (cell.s === 'egg') return `<div class="sym">${A.use('egg')}<div class="crack">${crackHTML(cell.hp)}</div></div>`;
+    if (cell.s === 'egg') return `${cell.sticky ? `<div class="nestbase">${A.use('nestbase')}</div>` : ''}<div class="sym">${A.use('egg')}<div class="crack">${crackHTML(cell.hp)}</div></div>`;
     return `<div class="sym">${A.use(cell.s)}</div>`;
   }
   function makeEl(cell) {
     const el = document.createElement('div');
-    el.className = 'cell ' + cell.s;
+    el.className = 'cell ' + cell.s + (cell.sticky ? ' sticky' : '');
     el.innerHTML = symHTML(cell);
     board.appendChild(el);
     els.set(k(cell.id), el);
@@ -104,16 +104,39 @@
     for (const el of list) { el.classList.remove('landed'); reflow(el); el.classList.add('landed'); }
   }
 
+  // Chute colonne par colonne : chaque colonne tombe d'un bloc (accélération), puis fait un mini rebond.
+  const COL_GAP = 105, FALL = 340;
+  function fallColumns(items, gap = COL_GAP) {
+    const cols = [...new Set(items.map((m) => m[1]))].sort((a, b) => a - b);
+    cols.forEach((c, i) => {
+      const list = items.filter((m) => m[1] === c);
+      for (const [el, , r] of list) {
+        el.classList.remove('no-anim');
+        el.style.transitionTimingFunction = 'cubic-bezier(.45,0,.9,.55)';
+        el.style.transitionDuration = FALL / spd() + 'ms';
+        el.style.transitionDelay = (i * gap) / spd() + 'ms';
+        place(el, c, r);
+      }
+      setTimeout(() => {
+        sfx.land(c);
+        for (const [el] of list) { el.style.transitionDelay = ''; el.style.transitionDuration = ''; el.style.transitionTimingFunction = ''; }
+        land(list.map((m) => m[0]));
+      }, (i * gap + FALL) / spd());
+    });
+    return wait(Math.max(0, cols.length - 1) * gap + FALL + 260);
+  }
+
   async function dropGrid(grid, first) {
     const old = [...board.querySelectorAll('.cell')];
     if (old.length && !first) {
       sfx.whoosh();
       for (const el of old) {
         el.style.transitionTimingFunction = 'cubic-bezier(.5,0,.9,.4)';
-        el.style.transitionDelay = (+el.dataset.c * 35) / spd() + 'ms';
+        el.style.transitionDuration = FALL / spd() + 'ms';
+        el.style.transitionDelay = (+el.dataset.c * 60) / spd() + 'ms';
         place(el, +el.dataset.c, +el.dataset.r + ROWS + 1);
       }
-      await wait(330 + COLS * 35);
+      await wait(FALL + (COLS - 1) * 60);
     }
     old.forEach((el) => el.remove());
     els.clear();
@@ -121,19 +144,11 @@
     for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
       const el = makeEl(grid[c][r]);
       el.classList.add('no-anim');
-      place(el, c, r - ROWS - 1);
+      place(el, c, r - ROWS - 0.5);
       fresh.push([el, c, r]);
     }
     reflow(board);
-    for (const [el, c, r] of fresh) {
-      el.classList.remove('no-anim');
-      el.style.transitionDelay = (c * 55 + (ROWS - r) * 14) / spd() + 'ms';
-      place(el, c, r);
-    }
-    for (let c = 0; c < COLS; c++) setTimeout(() => sfx.land(c), (c * 55 + 300) / spd());
-    await wait(380 + COLS * 55 + ROWS * 14);
-    for (const [el] of fresh) el.style.transitionDelay = '';
-    land(fresh.map((f) => f[0]));
+    await fallColumns(fresh);
   }
 
   async function tumble(step) {
@@ -162,14 +177,7 @@
       }
     }
     reflow(board);
-    for (const [el, c, r] of moved) {
-      el.classList.remove('no-anim');
-      el.style.transitionDelay = (c * 25) / spd() + 'ms';
-      place(el, c, r);
-    }
-    if (moved.length) { sfx.land(2); await wait(420 + COLS * 25); }
-    for (const [el] of moved) el.style.transitionDelay = '';
-    land(moved.map((m) => m[0]));
+    if (moved.length) await fallColumns(moved, 70);
   }
 
   /* ---------- petits effets ---------- */
@@ -242,10 +250,11 @@
   }
 
   /* ---------- fenêtres ---------- */
-  function overlay(html, { autoMs = 0, dismiss = true } = {}) {
+  function overlay(html, { autoMs = 0, dismiss = true, wide = false } = {}) {
     return new Promise((resolve) => {
       const ov = $('overlay'), card = $('overlayCard');
       card.innerHTML = html;
+      card.classList.toggle('wide', wide);
       ov.hidden = false;
       let done = false;
       const close = (v) => { if (done) return; done = true; ov.hidden = true; resolve(v); };
@@ -405,7 +414,7 @@
 
     async scatter(s) {
       for (const el of board.querySelectorAll('.cell.barn')) el.classList.add('glow');
-      sfx.fanfare(); coco('happy'); say('LA GRANGE!', 1800);
+      sfx.fanfare(); coco('happy'); say(s.kind === 'super' ? 'SUPER GRANGE!' : 'LA GRANGE!', 1800);
       runBase = runBase + seqVal + s.pay; seqVal = 0;
       showWin(runBase);
       await wait(1500);
@@ -414,15 +423,64 @@
     async buy() { runBase = 0; seqVal = 0; },
 
     async fsStart(s) {
-      const sup = s.mode === 'super';
-      await overlay(`<h2 class="red">${sup ? 'SUPER GRANGE!' : 'LA GRANGE EN FOLIE!'}</h2>
+      const B = E.BONUSES[s.kind];
+      await overlay(`<div class="bonus-intro">${A.use(B.icon, 'intro-ico')}
+        <h2 class="red">${B.name.toUpperCase()}!</h2>
         <div class="big">${s.spins} tours gratuits</div>
-        <p>Le Panier ne se vide plus : chaque multiplicateur s'ajoute et multiplie tous les gains suivants.${sup ? ' Œufs en pagaille, multiplicateurs ×5 minimum.' : ''}</p>
-        <button class="go" data-v="go">C'est parti !</button>`, { autoMs: state.auto ? 2500 : 0, dismiss: false });
-      state.fs = true; state.fsTotal = 0; fsBase = runBase;
-      document.body.classList.add('fs');
+        <p>${B.desc}</p>
+        <p class="note">${B.keep ? 'Panier persistant : les multiplicateurs s\'additionnent pendant tout le bonus.' : 'Le Panier repart de zéro à chaque tour.'}</p>
+        <button class="go" data-v="go">C'est parti !</button></div>`, { autoMs: state.auto ? 2500 : 0, dismiss: false });
+      state.fs = true; state.fsTotal = 0; state.fsKeep = !!B.keep; fsBase = runBase;
+      document.body.classList.add('fs', 'fs-' + s.kind);
       $('fsBox').hidden = false; $('fsLeft').textContent = s.spins;
+      $('fsName').textContent = B.name;
       setBasket(0);
+    },
+
+    async chicks(s) {
+      say('PIOU PIOU!', 1200); sfx.chick();
+      for (const e of s.cells) {
+        const old = [...board.querySelectorAll('.cell')].find((el) => +el.dataset.c === e.c && +el.dataset.r === e.r);
+        if (old) { old.classList.add('pop'); setTimeout(() => old.remove(), 250 / spd()); for (const [kk, v] of els) if (v === old) els.delete(kk); }
+        const el = makeEl(e.cell);
+        el.classList.add('no-anim'); place(el, e.c, -1.2); reflow(el);
+        el.classList.remove('no-anim'); place(el, e.c, e.r);
+        setTimeout(() => {
+          land([el]); sfx.boing();
+          const [x, y] = center(e.c, e.r);
+          puff(x, y); word('PIOU!', x, y - cellPx() * 0.4, '', 0.4);
+        }, 380 / spd());
+        await wait(300);
+      }
+      await wait(500);
+    },
+
+    async bombs(s) {
+      coco('scared'); say('ATTENTION!', 1200);
+      const sticks = s.bombs.map((b) => {
+        const [x, y] = center(b.c, b.r);
+        const d = document.createElement('div');
+        d.className = 'dyn falling';
+        d.innerHTML = A.use('dynamite') + `<div class="sp">${A.use('spark')}</div>`;
+        d.style.left = x + 'px'; d.style.top = y + 'px';
+        fx.appendChild(d);
+        return [d, x, y, b];
+      });
+      sfx.fuse();
+      await wait(900);
+      for (const [d, x, y, b] of sticks) {
+        d.remove();
+        const bo = document.createElement('div');
+        bo.className = 'boom'; bo.innerHTML = A.use('burst');
+        bo.style.left = x + 'px'; bo.style.top = y + 'px';
+        fx.appendChild(bo);
+        setTimeout(() => bo.remove(), 700 / spd());
+        word('BOUM!', x, y, 'red', 0.8);
+        sfx.boom(); shakeBoard();
+        for (const id of b.ids) { const t = els.get(k(id)); if (t) t.classList.add('charred'); }
+        await wait(380);
+      }
+      await wait(250);
     },
 
     async fsSpin(s) {
@@ -451,9 +509,9 @@
 
     async fsEnd(s) {
       await overlay(`<h2>TOTAL GAGNÉ</h2><div class="big">${fmt(s.win)}</div>
-        <p>${s.spins} tours gratuits, Panier final ×${s.totalMult}.</p><button class="go" data-v="go">Super !</button>`, { autoMs: state.auto ? 2500 : 0 });
+        <p>${s.name} : ${s.spins} tours gratuits${E.BONUSES[s.kind].keep ? `, Panier final ×${s.totalMult}` : ''}.</p><button class="go" data-v="go">Super !</button>`, { autoMs: state.auto ? 2500 : 0 });
       state.fs = false; state.fsTotal = 0;
-      document.body.classList.remove('fs');
+      document.body.className = '';
       $('fsBox').hidden = true;
       setBasket(0);
     },
@@ -552,37 +610,114 @@
     if (!state.busy) spinOnce();
   };
 
+  const pct = (x) => Math.round(x).toLocaleString('fr-CH') + ' %';
+
   $('buyBtn').onclick = async () => {
     if (state.busy) return;
     audio();
     const b = bet();
-    const cards = Object.entries(E.BONUS_BUYS).map(([kind, v]) => {
+    const cards = Object.entries(E.BONUSES).map(([kind, v], i) => {
       const price = v.cost * b;
-      return `<div class="buycard"><svg viewBox="0 0 100 100" width="70" height="70"><use href="#s-${kind === 'super' ? 'egg' : 'barn'}"/></svg>
-        <h3>${v.name}</h3><p>${v.desc}</p><div class="price">${fmt(price)}</div><p>${v.cost}× la mise</p>
-        <button class="go" data-v="${kind}" ${state.balance < price ? 'disabled' : ''}>Acheter</button></div>`;
+      return `<div class="buycard tier${i}">
+        <div class="tag-price">${v.cost}×</div>
+        ${A.use(v.icon, 'buy-ico')}
+        <h3>${v.name}</h3>
+        <p class="short">${v.short}</p>
+        <p class="spins">${v.spins} tours gratuits · ${v.keep ? 'Panier persistant' : 'Panier par tour'}</p>
+        <button class="go" data-v="${kind}" ${state.balance < price ? 'disabled' : ''}>${fmt(price)}</button>
+      </div>`;
     }).join('');
-    const kind = await overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button><h2 class="red">Acheter le bonus</h2>
-      <div class="row">${cards}</div>`);
-    if (kind && E.BONUS_BUYS[kind]) play(() => E.buyBonus(kind, b, rng), E.BONUS_BUYS[kind].cost * b);
+    const kind = await overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button>
+      <h2 class="red">Acheter un bonus</h2>
+      <p>Prix pour une mise de ${fmt(b)}. Chaque bonus rend environ 96 % de son prix en moyenne.</p>
+      <div class="buygrid">${cards}</div>`, { wide: true });
+    if (kind && E.BONUSES[kind]) play(() => E.buyBonus(kind, b, rng), E.BONUSES[kind].cost * b);
   };
 
-  $('infoBtn').onclick = () => {
+  function rulesHTML(tab) {
     const b = bet();
-    const pays = E.PAYING.slice().reverse().map((s) => `<div class="pay">${A.use(s)}<b>${E.SYMBOLS[s].name}</b>
-      ${[5, 8, 10, 15].map((n) => `<div><span>${n}${n === 15 ? '+' : ''}</span><span>${fmt(E.clusterPay(s, n) * b)}</span></div>`).join('')}</div>`).join('');
-    overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button><h2>Règles et gains</h2>
-      <p>Gains pour une mise de ${fmt(b)}. On gagne avec une grappe de 5 symboles identiques ou plus qui se touchent (haut, bas, gauche, droite).</p>
-      <div class="paytable">${pays}</div>
-      <ul class="rules">
-        <li><b>Dégringolade :</b> les grappes gagnantes explosent, tout tombe, de nouveaux symboles arrivent. On continue tant qu'il y a des gains.</li>
-        <li><b>Coco</b> traverse parfois la grille et pond 2 à 4 œufs.</li>
-        <li><b>Œufs :</b> chaque grappe qui explose à côté d'un œuf le fêle. Après 1 à 3 coups, il éclot : <b>multiplicateur</b> ×2 à ×500 (dans le Panier), <b>Poussin Wild</b> (joker), ou <b>dynamite</b> qui fait sauter 3×3 cases et fêle les œufs voisins.</li>
-        <li><b>Panier :</b> les multiplicateurs s'additionnent et multiplient le gain du tour.</li>
-        <li><b>4 Granges</b> ou plus : 10 tours gratuits « La Grange en Folie » (4 : ×3, 5 : ×5, 6 : ×100 la mise). Le Panier ne se vide plus. 3 Granges pendant le bonus : +5 tours.</li>
-        <li><b>Double Chance :</b> la mise coûte ×1,25 et le bonus arrive environ 1,5× plus souvent.</li>
-        <li>Gain maximum : ×${E.CONFIG.maxWinX.toLocaleString('fr-CH')} la mise. RTP théorique ≈ 96 %. Crédits fictifs, démonstration uniquement.</li>
-      </ul>`);
+    const sizes = [5, 6, 7, 8, 9, 10, 12, 15];
+    const T = {
+      gains: `
+        <p class="lead">Une <b>grappe</b> = 5 symboles identiques ou plus qui se touchent par un côté (haut, bas, gauche, droite). Les diagonales ne comptent pas. Montants pour une mise de <b>${fmt(b)}</b>.</p>
+        <div class="demo" aria-hidden="true">${[1,1,0,0,0, 0,1,1,0,0, 0,0,1,0,0].map((x) => `<i class="${x ? 'on' : ''}"></i>`).join('')}<span>= grappe de 5, elle paie</span></div>
+        <div class="tablewrap"><table class="paytab">
+          <thead><tr><th>Symbole</th>${sizes.map((n) => `<th>${n}${n === 15 ? '+' : ''}</th>`).join('')}</tr></thead>
+          <tbody>${E.PAYING.slice().reverse().map((sym, i) => `<tr class="${i === 0 ? 'top' : ''}">
+            <th>${A.use(sym, 'tab-ico')}<span>${E.SYMBOLS[sym].name}</span></th>
+            ${sizes.map((n) => `<td>${fmt(E.clusterPay(sym, n) * b)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>
+        <p class="small">Tous les gains d'une même mise s'additionnent. Les grappes gagnantes explosent, tout tombe, de nouveaux symboles arrivent : c'est la <b>dégringolade</b>, qui continue tant qu'il y a des gains. Pendant les bonus, les gains des grappes sont plus élevés.</p>`,
+
+      oeufs: `
+        <div class="specials">
+          <div class="sp-card">${A.use('wild', 'sp-ico')}<h4>Poussin Wild</h4><p>Remplace n'importe quel symbole pour compléter une grappe. Il peut servir à plusieurs grappes à la fois.</p></div>
+          <div class="sp-card">${A.use('barn', 'sp-ico')}<h4>Grange</h4><p>4 Granges : La Grange en Folie. 5 ou plus : Super Grange. Elles paient aussi 4 : ×3, 5 : ×5, 6+ : ×100 la mise.</p></div>
+          <div class="sp-card">${COCO_MINI}<h4>Coco pond</h4><p>Environ une mise sur 8, Coco traverse la grille et pond 2 à 4 œufs.</p></div>
+        </div>
+        <h3 class="sub">Les œufs</h3>
+        <div class="egg-steps">
+          <div>${A.use('egg', 'sp-ico')}<b>Intact</b><small>3 coups</small></div><span>→</span>
+          <div class="cr">${A.use('egg', 'sp-ico')}<div>${A.use('crack1', 'sp-ico')}</div><b>Fêlé</b><small>2 coups</small></div><span>→</span>
+          <div class="cr">${A.use('egg', 'sp-ico')}<div>${A.use('crack2', 'sp-ico')}</div><b>Prêt à éclore</b><small>1 coup</small></div>
+        </div>
+        <p>Chaque fois qu'une grappe gagnante explose <b>à côté</b> d'un œuf (diagonales comprises), l'œuf se fêle. Quand il éclot, il donne :</p>
+        <table class="odds">
+          <thead><tr><th>Surprise</th><th>Jeu normal</th><th>Bonus</th><th>Super Grange</th></tr></thead>
+          <tbody>
+            ${[['mult', 'burst', 'Multiplicateur', 'va dans le Panier'], ['chick', 'wild', 'Poussin Wild', 'reste sur la grille'], ['dyn', 'dynamite', 'Dynamite', 'explose en 3×3, fêle les œufs voisins']].map(([key, ico, name, what]) => {
+              const odds = ['base', 'fs', 'super'].map((m) => { const t = E.PRIZES[m].kinds; const tot = t.reduce((a, x) => a + x[1], 0); return pct(100 * t.find((x) => x[0] === key)[1] / tot); });
+              return `<tr><th>${A.use(ico, 'tab-ico')}<span>${name}<small>${what}</small></span></th>${odds.map((o) => `<td>${o}</td>`).join('')}</tr>`;
+            }).join('')}
+            <tr><th colspan="1"><span>Valeurs des multiplicateurs</span></th>${['base', 'fs', 'super'].map((m) => { const v = E.PRIZES[m].mult.map((x) => x[0]); return `<td>×${v[0]} à ×${v[v.length - 1]}</td>`; }).join('')}</tr>
+          </tbody>
+        </table>
+        <h3 class="sub">Le Panier</h3>
+        <p>Les multiplicateurs éclos pendant une mise s'<b>additionnent</b> dans le Panier (×2 + ×5 = ×7). À la fin de la dégringolade, le gain de la mise est multiplié par le Panier. Dans les bonus à Panier persistant, il ne se vide jamais et multiplie chaque tour gagnant.</p>`,
+
+      bonus: `
+        <p class="lead">5 bonus, du moins cher au plus cher. Prix pour une mise de <b>${fmt(b)}</b>.</p>
+        <div class="bonus-list">${Object.entries(E.BONUSES).map(([kind, v], i) => `
+          <div class="bl tier${i}">
+            ${A.use(v.icon, 'bl-ico')}
+            <div class="bl-main"><h4>${v.name}</h4><p>${v.desc}</p>
+              <div class="chips"><span>${v.spins} tours</span><span>${v.keep ? 'Panier persistant' : 'Panier par tour'}</span>${v.barns ? `<span class="hot">${v.barns === 4 ? '4 Granges' : v.barns + '+ Granges'}</span>` : '<span>achat seulement</span>'}</div>
+            </div>
+            <div class="bl-price"><b>${v.cost}×</b><small>${fmt(v.cost * b)}</small></div>
+          </div>`).join('')}
+        </div>
+        <p class="small">Pendant tous les bonus : 3 Granges ou plus rajoutent <b>+${E.CONFIG.retriggerSpins} tours</b>. Les œufs y sont plus nombreux et plus fragiles.</p>`,
+
+      infos: `
+        <table class="facts"><tbody>
+          <tr><th>RTP (retour au joueur)</th><td>≈ 96 %</td></tr>
+          <tr><th>RTP de chaque bonus acheté</th><td>≈ 96 %</td></tr>
+          <tr><th>Gain maximum</th><td>×${E.CONFIG.maxWinX.toLocaleString('fr-CH')} la mise</td></tr>
+          <tr><th>Volatilité</th><td>Élevée</td></tr>
+          <tr><th>Mises gagnantes</th><td>≈ 27 % (1 sur 4)</td></tr>
+          <tr><th>Bonus naturel</th><td>≈ 1 mise sur 300</td></tr>
+          <tr><th>Double Chance</th><td>Mise ×${E.CONFIG.anteCost.toLocaleString('fr-CH')}, bonus ≈ 1 mise sur 185</td></tr>
+          <tr><th>Grille</th><td>${COLS} colonnes × ${ROWS} lignes, grappes de 5+</td></tr>
+        </tbody></table>
+        <h3 class="sub">Commandes</h3>
+        <ul class="keys"><li><kbd>Espace</kbd> lance un tour</li><li>Cliquer sur la grille pendant un tour l'accélère</li><li><b>Turbo</b> : animations 2× plus rapides</li><li><b>Auto</b> : 50 tours automatiques (cliquer pour arrêter)</li></ul>
+        <p class="small">Démonstration en crédits fictifs. Si le gain d'une mise atteint le maximum, la mise s'arrête et le gain est plafonné. Une panne annule toutes les mises et tous les gains.</p>`,
+    };
+    const tabs = [['gains', 'Gains'], ['oeufs', 'Œufs & Coco'], ['bonus', 'Les 5 bonus'], ['infos', 'Infos']];
+    return `<button class="round close" data-v="" aria-label="Fermer">×</button><h2>Règles du jeu</h2>
+      <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" class="tab ${id === tab ? 'on' : ''}" data-tab="${id}" aria-selected="${id === tab}">${label}</button>`).join('')}</div>
+      <div class="tabbody">${T[tab]}</div>`;
+  }
+  const COCO_MINI = `<div class="sp-ico coco-mini">${A.COCO}</div>`;
+
+  $('infoBtn').onclick = () => {
+    const show = (tab) => {
+      $('overlayCard').innerHTML = rulesHTML(tab);
+      $('overlayCard').querySelectorAll('[data-tab]').forEach((t) => t.addEventListener('click', () => show(t.dataset.tab)));
+      $('overlayCard').querySelector('.close').addEventListener('click', () => { $('overlay').hidden = true; });
+    };
+    overlay('', { wide: true });
+    show('gains');
   };
 
   /* ---------- taille du plateau ---------- */
@@ -609,8 +744,7 @@
 
   // Pour tester depuis la console : coco.bonus(), coco.super()
   window.coco = {
-    bonus: () => play(() => E.buyBonus('grange', bet(), rng), 0),
-    super: () => play(() => E.buyBonus('super', bet(), rng), 0),
+    bonus: (kind = 'grange') => play(() => E.buyBonus(kind, bet(), rng), 0),
     replay: (r) => play(() => r, 0),
     eggs: () => { let r; do r = E.spin(bet(), rng); while (!r.steps.some((s) => s.type === 'coco')); play(() => r, bet()); },
   };

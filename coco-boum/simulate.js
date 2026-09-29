@@ -2,7 +2,7 @@
 /*
  * Mesure le RTP et la volatilité de Coco Boum! avec le vrai moteur.
  *   node simulate.js [mises=1000000] [graine=1] [--ante]
- *   node simulate.js --buy grange|super [achats=20000] [graine=1]
+ *   node simulate.js --buy chicks|sticky|dynamite|grange|super [achats=20000] [graine=1]
  */
 'use strict';
 const E = require('./engine.js');
@@ -27,6 +27,7 @@ const spins = +(args[0] || 1e6);
 const rng = E.mulberry32(+(args[1] || 1));
 
 let paid = 0, total = 0, sumSq = 0, hits = 0, maxX = 0, capped = 0;
+const byKind = {};
 let bonuses = 0, bonusWin = 0, cocos = 0, eggsHatched = 0, dyn = 0, chicks = 0, mults = 0, retrig = 0;
 const edges = [0.000001, 1, 5, 20, 100, 1000];
 const buckets = new Array(edges.length + 1).fill(0);
@@ -40,7 +41,7 @@ for (let i = 0; i < spins; i++) {
   if (win > 0) hits++;
   if (win > maxX) maxX = win;
   if (win >= E.CONFIG.maxWinX) capped++;
-  if (res.bonus) bonuses++;
+  if (res.bonus) { bonuses++; byKind[res.bonus] = (byKind[res.bonus] || 0) + 1; }
   for (const s of res.steps) {
     if (s.type === 'fsEnd') bonusWin += s.win;
     else if (s.type === 'coco') cocos++;
@@ -67,7 +68,8 @@ console.log(`  dont bonus         ${(bonusWin / paid * 100).toFixed(2)} %`);
 console.log(`Fréquence de gain    ${pct(hits)}  (${every(hits)})`);
 console.log(`Écart-type (×mise)   ${sd.toFixed(2)}`);
 console.log(`Gain max observé     ×${maxX.toFixed(2)}   (plafond ×${E.CONFIG.maxWinX} atteint ${capped} fois)`);
-console.log(`Grange en Folie      ${every(bonuses)}   gain moyen ×${bonuses ? (bonusWin / bonuses).toFixed(1) : 0}   relances ${retrig}`);
+console.log(`Bonus naturel        ${every(bonuses)}   gain moyen ×${bonuses ? (bonusWin / bonuses).toFixed(1) : 0}   relances ${retrig}`);
+for (const [k, n] of Object.entries(byKind)) console.log(`  ${E.BONUSES[k].name.padEnd(19)}${every(n)}`);
 console.log(`Coco pond            ${every(cocos)}`);
 console.log(`Œufs éclos           ${every(eggsHatched)}   (mult ${mults}, poussins ${chicks}, dynamites ${dyn})`);
 console.log('Répartition des gains (×mise) :');
