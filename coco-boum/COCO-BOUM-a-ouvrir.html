@@ -1,0 +1,1565 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coco Boum!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@500;600;700&display=swap">
+<style>
+/* Ferme en plein jour, façon dessin animé : contours bruns épais, aplats vifs, planches de bois. */
+:root {
+  --ink: #2a1608;
+  --sky-top: #3fb4ff;
+  --sky-bottom: #b8ecff;
+  --grass: #6cc644;
+  --barn: #e0452b;
+  --chick: #ffd23f;
+  --cream: #fff4dc;
+  --wood: #c98a4b;
+  --wood-dark: #8a5528;
+  --fox: #ff8a1f;
+  --display: 'Luckiest Guy', 'Arial Black', Impact, sans-serif;
+  --body: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
+  --cell: 64px;
+  --speed: 1;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body {
+  background: var(--sky-bottom);
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, label:focus-within { outline: 4px solid #fff; outline-offset: 2px; }
+
+/* ---------- décor ---------- */
+#scene { position: fixed; inset: 0; pointer-events: none; overflow: hidden; background: linear-gradient(var(--sky-top), var(--sky-bottom) 70%); transition: background 1s; }
+.sun { position: absolute; top: 4vh; right: 6vw; width: 16vh; height: 16vh; }
+.sun .rays { position: absolute; inset: -60%; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 238, 120, .55) 0 10deg, transparent 10deg 20deg);
+  animation: spinSlow 40s linear infinite; }
+.sun .face { position: absolute; inset: 0; border-radius: 50%; background: #ffe24a; border: 5px solid var(--ink);
+  box-shadow: inset -8px -8px 0 #ffc928; }
+.sun .face::before, .sun .face::after { content: ''; position: absolute; top: 38%; width: 10%; height: 16%; border-radius: 50%; background: var(--ink); }
+.sun .face::before { left: 32%; } .sun .face::after { right: 32%; }
+.cloud { position: absolute; width: 180px; height: 60px; background: #fff; border: 5px solid var(--ink); border-radius: 40px; animation: drift linear infinite; }
+.cloud::before, .cloud::after { content: ''; position: absolute; background: #fff; border: 5px solid var(--ink); border-bottom: 0; border-radius: 50% 50% 0 0; }
+.cloud::before { width: 70px; height: 50px; left: 26px; top: -34px; border-right: 0; }
+.cloud::after { width: 90px; height: 64px; left: 70px; top: -46px; }
+.cloud.c1 { top: 8vh; animation-duration: 70s; animation-delay: -20s; }
+.cloud.c2 { top: 22vh; transform: scale(.7); animation-duration: 95s; animation-delay: -60s; }
+.cloud.c3 { top: 4vh; transform: scale(.5); animation-duration: 120s; animation-delay: -5s; }
+.hills { position: absolute; left: 0; bottom: 0; width: 100%; height: 40vh; }
+.mill { position: absolute; left: 3vw; bottom: 16vh; height: 30vh; }
+.mill .blades { transform-origin: 60px 80px; animation: spinSlow 9s linear infinite; }
+body.fs { --sky-top: #5b2a86; --sky-bottom: #ff9d5c; }
+body.fs .sun .face { background: #ffb347; }
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+@keyframes drift { from { left: -240px; } to { left: 110vw; } }
+
+/* ---------- mise en page ---------- */
+#app { position: relative; height: 100%; display: flex; flex-direction: column; padding: 8px 16px; gap: 6px; }
+#top { text-align: center; line-height: 1; }
+.logo { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(30px, 6vh, 62px); letter-spacing: 2px;
+  -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
+.logo .w1 { color: #fff; }
+.logo .w2 { color: var(--chick); display: inline-block; animation: wobble 2.4s ease-in-out infinite; }
+.tag { font-weight: 700; font-size: clamp(12px, 1.8vh, 17px); color: #fff; -webkit-text-stroke: 1px var(--ink); paint-order: stroke fill; margin-top: 2px; }
+@keyframes wobble { 0%, 100% { transform: rotate(-3deg) scale(1); } 50% { transform: rotate(3deg) scale(1.06); } }
+
+#stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; align-items: center; }
+#left, #right { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
+
+/* ---------- plateau ---------- */
+#boardWrap { position: relative; width: calc(var(--cell) * 7 + 38px); height: calc(var(--cell) * 6 + 38px); padding: 14px;
+  border: 5px solid var(--ink); border-radius: 22px;
+  background:
+    radial-gradient(circle at 12px 12px, #6b4a2a 3px, transparent 4px) 0 0 / 100% 100% no-repeat,
+    repeating-linear-gradient(90deg, var(--wood) 0 38px, var(--wood-dark) 38px 41px);
+  box-shadow: 0 9px 0 var(--ink), inset 0 0 0 4px #e3a86a; }
+#boardWrap::after { content: ''; position: absolute; inset: 14px; border-radius: 12px; border: 4px solid var(--ink); pointer-events: none; }
+#board { position: relative; width: 100%; height: 100%; border-radius: 12px; overflow: hidden;
+  background: repeating-conic-gradient(#fff4dc 0 25%, #ffe9bd 0 50%) 0 0 / calc(var(--cell) * 2) calc(var(--cell) * 2); }
+#fx { position: absolute; inset: 14px; pointer-events: none; }
+
+.cell { position: absolute; left: 0; top: 0; width: var(--cell); height: var(--cell); padding: calc(var(--cell) * .06);
+  transition: transform calc(380ms / var(--speed)) cubic-bezier(.34, 1.45, .64, 1); will-change: transform; }
+.cell.no-anim { transition: none; }
+.cell .sym { position: relative; width: 100%; height: 100%; transform-origin: 50% 90%; }
+.cell svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.cell .crack { position: absolute; inset: 0; }
+.cell.landed .sym { animation: squash calc(300ms / var(--speed)) ease-out; }
+.cell.win .sym { animation: wiggle calc(260ms / var(--speed)) ease-in-out infinite; filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px #ffd23f); }
+.cell.pop .sym { animation: pop calc(300ms / var(--speed)) ease-in forwards; }
+.cell.egg .sym { animation: eggIdle 2.2s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 210, 63, .9)); }
+.cell.shake .sym { animation: shake calc(90ms / var(--speed)) linear 5; }
+.cell.barn.glow .sym { animation: barnGlow .5s ease-in-out infinite alternate; }
+.cell.charred .sym { filter: brightness(.25) sepia(1); }
+@keyframes squash { 0% { transform: scale(1.15, .8); } 55% { transform: scale(.94, 1.08); } 100% { transform: none; } }
+@keyframes wiggle { 0%, 100% { transform: rotate(-7deg) scale(1.08); } 50% { transform: rotate(7deg) scale(1.08); } }
+@keyframes pop { 0% { transform: scale(1.1); } 40% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+@keyframes eggIdle { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes shake { 0% { transform: translateX(-5%) rotate(-6deg); } 50% { transform: translateX(5%) rotate(6deg); } 100% { transform: translateX(-5%) rotate(-6deg); } }
+@keyframes barnGlow { from { transform: scale(1); filter: drop-shadow(0 0 4px #fff); } to { transform: scale(1.12); filter: drop-shadow(0 0 14px #ffd23f); } }
+
+/* ---------- effets ---------- */
+.word { position: absolute; font-family: var(--display); color: var(--chick); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink); white-space: nowrap; transform: translate(-50%, -50%); pointer-events: none; z-index: 5;
+  animation: wordPop calc(900ms / var(--speed)) cubic-bezier(.3, 1.6, .5, 1) forwards; }
+.word.red { color: var(--barn); }
+.word.white { color: #fff; }
+@keyframes wordPop { 0% { transform: translate(-50%, -50%) scale(0) rotate(-12deg); } 30% { transform: translate(-50%, -50%) scale(1.2) rotate(4deg); }
+  75% { opacity: 1; transform: translate(-50%, -60%) scale(1) rotate(0); } 100% { opacity: 0; transform: translate(-50%, -90%) scale(.9); } }
+.medal { position: absolute; width: calc(var(--cell) * 1.1); height: calc(var(--cell) * 1.1); transform: translate(-50%, -50%); z-index: 6; pointer-events: none;
+  display: grid; place-items: center; transition: left calc(600ms / var(--speed)) cubic-bezier(.5, -0.3, .6, 1), top calc(600ms / var(--speed)) cubic-bezier(.3, -0.6, .6, 1), transform calc(600ms / var(--speed)); }
+.medal svg { position: absolute; inset: 0; width: 100%; height: 100%; animation: spinSlow 3s linear infinite; }
+.medal b { position: relative; font-family: var(--display); font-weight: 400; font-size: calc(var(--cell) * .38); color: #fff; -webkit-text-stroke: 2.5px var(--ink); paint-order: stroke fill; }
+.medal.born { animation: medalIn calc(450ms / var(--speed)) cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes medalIn { from { transform: translate(-50%, -50%) scale(0) rotate(-90deg); } }
+.shell { position: absolute; width: calc(var(--cell) * .5); height: calc(var(--cell) * .3); background: var(--cream); border: 3px solid var(--ink);
+  pointer-events: none; z-index: 4; animation: shellFly calc(600ms / var(--speed)) ease-in forwards; }
+.shell.top { border-radius: 50% 50% 10% 10%; clip-path: polygon(0 0, 100% 0, 100% 70%, 80% 100%, 60% 70%, 40% 100%, 20% 70%, 0 100%); --dx: -40px; }
+.shell.bot { border-radius: 10% 10% 50% 50%; --dx: 40px; }
+@keyframes shellFly { to { transform: translate(var(--dx), 60px) rotate(200deg); opacity: 0; } }
+.star { position: absolute; width: calc(var(--cell) * .32); height: calc(var(--cell) * .32); pointer-events: none; z-index: 4;
+  animation: starFly calc(600ms / var(--speed)) ease-out forwards; }
+.star svg { width: 100%; height: 100%; }
+@keyframes starFly { from { transform: translate(-50%, -50%) scale(.4); } to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(180deg) scale(1); opacity: 0; } }
+.puff { position: absolute; width: calc(var(--cell) * 1.3); height: calc(var(--cell) * 1.3); transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: 4;
+  background: radial-gradient(circle at 30% 30%, #fff 0 30%, transparent 31%), radial-gradient(circle at 70% 35%, #fff 0 28%, transparent 29%), radial-gradient(circle at 50% 70%, #fff 0 32%, transparent 33%);
+  filter: drop-shadow(0 0 1px var(--ink)) drop-shadow(0 0 1px var(--ink)); animation: puff calc(500ms / var(--speed)) ease-out forwards; }
+@keyframes puff { from { transform: translate(-50%, -50%) scale(.3); } 60% { opacity: 1; } to { transform: translate(-50%, -50%) scale(1.3); opacity: 0; } }
+.boom { position: absolute; width: calc(var(--cell) * 3.4); height: calc(var(--cell) * 3.4); transform: translate(-50%, -50%); pointer-events: none; z-index: 7;
+  animation: boom calc(650ms / var(--speed)) cubic-bezier(.2, 1.4, .5, 1) forwards; }
+.boom svg { width: 100%; height: 100%; }
+@keyframes boom { 0% { transform: translate(-50%, -50%) scale(.1) rotate(-30deg); } 40% { transform: translate(-50%, -50%) scale(1.1) rotate(8deg); } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.25); opacity: 0; } }
+.dyn { position: absolute; width: var(--cell); height: var(--cell); transform: translate(-50%, -50%); z-index: 6; pointer-events: none; animation: fizz 120ms linear infinite; }
+.dyn svg { width: 100%; height: 100%; }
+.dyn .sp { position: absolute; right: -8%; top: -14%; width: 40%; height: 40%; animation: spinSlow .3s linear infinite; }
+@keyframes fizz { 50% { transform: translate(-50%, -50%) rotate(4deg) scale(1.05); } }
+.shakeAll { animation: bigShake calc(400ms / var(--speed)) linear; }
+@keyframes bigShake { 20% { transform: translate(-8px, 5px) rotate(-1deg); } 40% { transform: translate(8px, -6px) rotate(1deg); } 60% { transform: translate(-6px, -3px); } 80% { transform: translate(5px, 4px); } }
+.runner { position: absolute; top: calc(var(--cell) * -1.1); left: -30%; width: calc(var(--cell) * 1.6); z-index: 8; pointer-events: none;
+  transition: left calc(1100ms / var(--speed)) linear; }
+.runner .coco-svg { width: 100%; animation: hop calc(160ms / var(--speed)) ease-in-out infinite alternate; }
+@keyframes hop { to { transform: translateY(-10%) rotate(4deg); } }
+
+#winFloat { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 9; pointer-events: none;
+  font-family: var(--display); font-size: calc(var(--cell) * .9); color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ink);
+  animation: slam calc(500ms / var(--speed)) cubic-bezier(.3, 1.7, .5, 1); white-space: nowrap; }
+#winFloat em { font-style: normal; color: var(--chick); }
+@keyframes slam { from { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } }
+
+/* ---------- Coco et le Panier ---------- */
+#cocoBox { position: relative; width: min(100%, 230px); }
+#coco .coco-svg { width: 100%; display: block; animation: breathe 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+#coco.happy .coco-svg { animation: jump .45s cubic-bezier(.3, 1.6, .5, 1) 3; }
+#coco.scared .coco-svg { animation: shake .09s linear 8; }
+.coco-svg .lid { transform-box: fill-box; transform-origin: 50% 0; transform: scaleY(0); animation: blink 4s infinite; }
+.fuse-spark { animation: spinSlow .4s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, .97); } }
+@keyframes jump { 40% { transform: translateY(-22%) scale(.92, 1.1); } 70% { transform: translateY(0) scale(1.1, .9); } }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(0); } 95% { transform: scaleY(1); } }
+#bubble { position: absolute; top: -6%; right: -14%; z-index: 2; background: #fff; border: 4px solid var(--ink); border-radius: 18px; padding: 6px 12px;
+  font-family: var(--display); font-size: 20px; white-space: nowrap; animation: slamSmall .35s cubic-bezier(.3, 1.8, .5, 1); }
+#bubble::after { content: ''; position: absolute; left: 18px; bottom: -14px; border: 8px solid transparent; border-top: 10px solid var(--ink); }
+@keyframes slamSmall { from { transform: scale(0); } }
+
+#basket, #fsBox { width: min(100%, 210px); text-align: center; background: var(--wood); border: 5px solid var(--ink); border-radius: 18px;
+  box-shadow: 0 6px 0 var(--ink); padding: 6px 10px 8px;
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, .08) 0 6px, transparent 6px 12px), repeating-linear-gradient(-45deg, rgba(255, 255, 255, .12) 0 6px, transparent 6px 12px); }
+.basket-label, .fs-label { font-weight: 700; color: #fff; -webkit-text-stroke: 1px var(--ink); paint-order: stroke fill; font-size: 16px; }
+.basket-val, .fs-val { font-family: var(--display); font-size: 40px; line-height: 1.05; color: var(--chick); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
+#basket.bump { animation: squash .4s ease-out; }
+#basket.hot .basket-val { color: #fff; animation: wobble .5s ease-in-out infinite; }
+#fsBox { background-color: #7b3fb0; }
+
+/* ---------- panneaux de bois ---------- */
+.plank { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: min(100%, 190px); min-height: 70px; padding: 8px 12px;
+  background: var(--wood) repeating-linear-gradient(0deg, transparent 0 16px, rgba(0, 0, 0, .12) 16px 18px); border: 5px solid var(--ink); border-radius: 14px;
+  box-shadow: 0 6px 0 var(--ink); text-align: center; font-weight: 600; font-size: 14px; color: #fff; -webkit-text-stroke: .6px var(--ink); transition: transform .1s; }
+.plank b { font-family: var(--display); font-weight: 400; font-size: 22px; letter-spacing: 1px; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; display: block; }
+.plank:hover { transform: translateY(-2px) rotate(-1deg); }
+.plank:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+.plank.buy { background-color: var(--barn); }
+.plank.ante { cursor: pointer; flex-direction: row; gap: 10px; text-align: left; }
+.plank.ante input { appearance: none; width: 30px; height: 30px; flex: none; border: 4px solid var(--ink); border-radius: 8px; background: var(--cream); margin: 0; cursor: pointer; }
+.plank.ante input:checked { background: var(--chick) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4 10l4 4 8-9' fill='none' stroke='%232a1608' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/80% no-repeat; }
+.plank.ante b { font-size: 17px; }
+.plank.ante small { display: block; font-size: 12px; }
+button:disabled, .plank.off { opacity: .5; pointer-events: none; }
+
+/* ---------- barre du bas ---------- */
+#bar { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 2vw, 28px); flex-wrap: wrap;
+  padding: 8px 18px calc(8px + env(safe-area-inset-bottom, 0px)); background: var(--wood-dark); border: 5px solid var(--ink); border-radius: 22px;
+  box-shadow: 0 6px 0 var(--ink); max-width: 1000px; width: 100%; margin: 0 auto 6px; }
+.field { display: flex; flex-direction: column; align-items: center; min-width: 110px; color: #fff; }
+.field small { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; opacity: .9; }
+.field b { font-family: var(--display); font-weight: 400; font-size: 26px; letter-spacing: 1px; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; font-variant-numeric: tabular-nums; }
+.field.win b { color: var(--chick); }
+.betrow { display: flex; align-items: center; gap: 8px; }
+.round { width: 38px; height: 38px; border-radius: 50%; border: 4px solid var(--ink); background: var(--cream); color: var(--ink); font-family: var(--display); font-size: 22px; line-height: 1;
+  box-shadow: 0 3px 0 var(--ink); display: grid; place-items: center; padding: 0; }
+.round.wide { width: auto; border-radius: 20px; padding: 0 12px; font-family: var(--body); font-weight: 700; font-size: 14px; }
+.round.on { background: var(--chick); }
+.round:active { transform: translateY(3px); box-shadow: none; }
+.toggles { display: flex; gap: 8px; }
+#spin { width: 92px; height: 110px; border: 5px solid var(--ink); border-radius: 50% 50% 48% 48% / 58% 58% 42% 42%; background: radial-gradient(circle at 35% 30%, #fff 0 12%, #ffe07a 13%, var(--chick) 55%, #f0a800);
+  box-shadow: 0 7px 0 var(--ink); margin-top: -34px; padding: 14px; transition: transform .15s; }
+#spin svg { width: 100%; height: 100%; }
+#spin:hover svg { animation: spinSlow .8s linear infinite; }
+#spin:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+#spin.busy { background: radial-gradient(circle at 35% 30%, #fff 0 12%, #ffd0b8 13%, #ff8a1f 60%, #e0452b); }
+#spin.busy svg { animation: spinSlow .5s linear infinite; }
+
+/* ---------- fenêtres ---------- */
+#overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(42, 22, 8, .55); }
+#overlay .card { position: relative; max-width: 620px; width: 100%; max-height: 90%; overflow: auto; background: var(--cream); border: 6px solid var(--ink); border-radius: 26px;
+  box-shadow: 0 10px 0 var(--ink); padding: 22px; text-align: center; animation: slam .45s cubic-bezier(.3, 1.6, .5, 1); }
+.card h2 { font-family: var(--display); font-weight: 400; font-size: 38px; margin: 0 0 8px; color: var(--chick); -webkit-text-stroke: 2.5px var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink); line-height: 1.1; }
+.card h2.red { color: var(--barn); }
+.card p { font-size: 17px; margin: 8px auto; max-width: 48ch; line-height: 1.4; }
+.card .big { font-family: var(--display); font-size: clamp(44px, 9vw, 78px); color: var(--chick); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ink); font-variant-numeric: tabular-nums; }
+.card .go { margin-top: 14px; font-family: var(--display); font-size: 24px; padding: 10px 28px; border: 5px solid var(--ink); border-radius: 18px; background: var(--chick); box-shadow: 0 6px 0 var(--ink); }
+.card .go.alt { background: #fff; }
+.card .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.buycard { flex: 1 1 220px; border: 5px solid var(--ink); border-radius: 18px; padding: 12px; background: #fff; box-shadow: 0 5px 0 var(--ink); display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.buycard h3 { font-family: var(--display); font-weight: 400; font-size: 24px; margin: 0; color: var(--barn); -webkit-text-stroke: 1px var(--ink); }
+.buycard .price { font-family: var(--display); font-size: 30px; }
+.buycard p { font-size: 14px; margin: 0; }
+.buycard .go { margin-top: auto; font-size: 20px; padding: 8px 20px; }
+.paytable { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
+.pay { border: 4px solid var(--ink); border-radius: 14px; background: #fff; padding: 6px; font-size: 13px; }
+.pay svg { width: 56px; height: 56px; }
+.pay div { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.rules { text-align: left; font-size: 15px; line-height: 1.45; }
+.rules li { margin: 4px 0; }
+.close { position: absolute; top: 10px; right: 10px; }
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
+.bigwin h2 { font-size: clamp(40px, 8vw, 70px); animation: wobble .8s ease-in-out infinite; }
+
+/* ---------- téléphone ---------- */
+@media (max-width: 820px), (max-aspect-ratio: 1/1) {
+  #app { padding: 6px 10px; }
+  #stage { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; justify-items: center; }
+  #left { order: 0; flex-direction: row; justify-content: center; width: 100%; }
+  #boardWrap { order: 1; }
+  #right { order: 2; flex-direction: row; justify-content: center; width: 100%; }
+  #cocoBox { width: 70px; }
+  #bubble { font-size: 14px; right: auto; left: 60px; top: 0; }
+  #basket, #fsBox { width: auto; min-width: 100px; padding: 3px 10px; }
+  .basket-val, .fs-val { font-size: 28px; }
+  .plank { min-height: 48px; padding: 4px 8px; font-size: 11px; width: auto; flex: 1 1 0; max-width: 170px; }
+  .plank b { font-size: 16px; }
+  .plank.ante b { font-size: 13px; }
+  .plank.ante small { display: none; }
+  .plank.ante input { width: 22px; height: 22px; border-width: 3px; }
+  .mill { display: none; }
+  #bar { gap: 8px 14px; padding: 6px 10px; }
+  .field { min-width: 80px; }
+  .field b { font-size: 20px; }
+  #spin { width: 74px; height: 88px; margin-top: 0; order: -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+
+</style>
+</head>
+<body>
+<!--BODY-->
+<div id="scene" aria-hidden="true">
+  <div class="sun"><div class="rays"></div><div class="face"></div></div>
+  <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+  <svg class="hills" viewBox="0 0 1600 400" preserveAspectRatio="none">
+    <path d="M0 220 C200 140 380 150 560 210 C760 120 980 130 1180 200 C1340 150 1480 160 1600 190 V400 H0Z" fill="#9be36b" stroke="#2a1608" stroke-width="5"/>
+    <path d="M0 300 C260 230 520 240 800 290 C1060 230 1340 240 1600 280 V400 H0Z" fill="#6cc644" stroke="#2a1608" stroke-width="5"/>
+  </svg>
+  <svg class="mill" viewBox="0 0 120 200">
+    <path d="M44 196 L52 80 H68 L76 196Z" fill="#fff4dc" stroke="#2a1608" stroke-width="5" stroke-linejoin="round"/>
+    <g class="blades"><path d="M60 80 L60 10 L74 14 Z M60 80 L130 80 L126 94Z M60 80 L60 150 L46 146Z M60 80 L-10 80 L-6 66Z" fill="#e0452b" stroke="#2a1608" stroke-width="4" stroke-linejoin="round"/><circle cx="60" cy="80" r="8" fill="#ffd23f" stroke="#2a1608" stroke-width="4"/></g>
+  </svg>
+</div>
+
+<div id="app">
+  <header id="top">
+    <h1 class="logo"><span class="w1">COCO</span> <span class="w2">BOUM!</span></h1>
+    <div class="tag">La poule qui pond de la dynamite</div>
+  </header>
+
+  <main id="stage">
+    <aside id="left">
+      <div id="cocoBox"><div id="bubble" hidden></div><div id="coco"></div></div>
+      <div id="basket" title="Panier : les multiplicateurs des œufs s'additionnent ici">
+        <div class="basket-label">Panier</div>
+        <div class="basket-val" id="basketVal">×0</div>
+      </div>
+      <div id="fsBox" hidden>
+        <div class="fs-label">Tours gratuits</div>
+        <div class="fs-val"><span id="fsLeft">10</span></div>
+      </div>
+    </aside>
+
+    <section id="boardWrap">
+      <div id="board"></div>
+      <div id="fx"></div>
+      <div id="winFloat" hidden></div>
+    </section>
+
+    <aside id="right">
+      <button class="plank buy" id="buyBtn"><b>Acheter</b><span>le bonus</span></button>
+      <label class="plank ante" id="anteBox"><input type="checkbox" id="ante"><span><b>Double Chance</b><small>mise ×1,25, bonus plus fréquent</small></span></label>
+      <button class="plank info" id="infoBtn"><b>Règles</b><span>et gains</span></button>
+    </aside>
+  </main>
+
+  <footer id="bar">
+    <div class="field"><small>Solde</small><b id="balance">1 000,00</b></div>
+    <div class="field bet">
+      <small>Mise</small>
+      <div class="betrow"><button class="round" id="betDown" aria-label="Baisser la mise">−</button><b id="bet">1,00</b><button class="round" id="betUp" aria-label="Augmenter la mise">+</button></div>
+    </div>
+    <button id="spin" aria-label="Lancer"><svg viewBox="0 0 100 100"><path d="M50 18 A32 32 0 1 1 20 40" fill="none" stroke="#2a1608" stroke-width="11" stroke-linecap="round"/><path d="M50 18 A32 32 0 1 1 20 40" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M8 34 L24 50 L32 28Z" fill="#fff" stroke="#2a1608" stroke-width="4" stroke-linejoin="round"/></svg></button>
+    <div class="field win"><small>Gain</small><b id="win">0,00</b></div>
+    <div class="toggles">
+      <button class="round wide" id="autoBtn">Auto</button>
+      <button class="round wide" id="turboBtn">Turbo</button>
+      <button class="round" id="soundBtn" aria-label="Son">🔊</button>
+    </div>
+  </footer>
+</div>
+
+<div id="overlay" hidden><div class="card" id="overlayCard"></div></div>
+<canvas id="confetti"></canvas>
+<!--/BODY-->
+<script>
+/* =========================================================
+   COCO BOUM! — moteur mathématique (sans affichage)
+
+   spin(mise, rng, { ante }) calcule le résultat complet d'une
+   mise : grille 7×6, gains par grappes (5+ symboles voisins),
+   dégringolades, œufs à casser et, si 4 Granges tombent, les
+   tours gratuits « La Grange en Folie ».
+   Chaque mise est indépendante : aucun état ne passe d'une
+   mise à l'autre. L'interface ne fait que rejouer les étapes.
+   simulate.js utilise ce même moteur pour mesurer le RTP.
+   ========================================================= */
+(function (root) {
+  'use strict';
+
+  const COLS = 7;
+  const ROWS = 6;
+
+  // Tous les réglages mathématiques sont ici. Mesurer avec : node simulate.js
+  const CONFIG = {
+    minCluster: 5,          // symboles voisins (haut/bas/gauche/droite) requis pour gagner
+    payScale: 2.52,         // multiplicateur global de la table des gains (sert à caler le RTP)
+    fsPayScale: 4.1,        // gains des grappes multipliés pendant les tours gratuits (cale le bonus)
+    maxWinX: 10000,         // plafond de gain par mise, en multiple de la mise
+    scatterNeed: 4,         // Granges pour déclencher les tours gratuits
+    retriggerNeed: 3,       // Granges pour relancer pendant les tours gratuits
+    freeSpins: 10,
+    retriggerSpins: 5,
+    scatterPay: { 4: 3, 5: 5, 6: 100 }, // gains des Granges (× mise), jeu de base
+    maxEggs: 6,             // œufs au maximum sur la grille
+    cocoChance: 0.12,       // Coco traverse la grille et pond des œufs (jeu de base)
+    cocoChanceFs: 0.3,      // idem pendant les tours gratuits
+    cocoEggs: [2, 4],       // œufs pondus par Coco (min, max)
+    anteCost: 1.25,         // Double Chance : la mise coûte ×1,25…
+    anteScatter: 1.135,     // …et les Granges tombent plus souvent (bonus ≈ 2× plus fréquent)
+    maxSteps: 80,           // garde-fou contre les boucles
+  };
+
+  // Poids d'apparition [jeu de base, tours gratuits, super bonus] et gain de base (× mise, grappe de 5).
+  const SYMBOLS = {
+    corn:    { name: 'Maïs',    w: [22, 22, 22], pay: 0.2 },
+    carrot:  { name: 'Carotte', w: [21, 21, 21], pay: 0.25 },
+    apple:   { name: 'Pomme',   w: [20, 20, 20], pay: 0.3 },
+    sheep:   { name: 'Mouton',  w: [16, 16, 16], pay: 0.5 },
+    pig:     { name: 'Cochon',  w: [14, 14, 14], pay: 0.75 },
+    cow:     { name: 'Vache',   w: [12, 12, 12], pay: 1 },
+    fox:     { name: 'Renard',  w: [9, 9, 9],    pay: 1.5 },
+    barn:    { name: 'Grange',  w: [1.72, 1.3, 1.3] },
+    egg:     { name: 'Œuf',     w: [1.6, 6, 9] },
+    wild:    { name: 'Poussin', w: [0, 0, 0] },
+  };
+  const PAYING = ['corn', 'carrot', 'apple', 'sheep', 'pig', 'cow', 'fox'];
+  const SPAWNABLE = [...PAYING, 'barn', 'egg'];
+
+  // Gain selon la taille de la grappe : 5, 6, 7 … 15+ (multiplie le gain de base).
+  const CURVE = [1, 1.5, 2, 3, 4, 6, 8, 12, 16, 25, 40];
+
+  // Solidité des œufs (coups avant éclosion) : jeu de base, tours gratuits, super bonus.
+  const EGG_HP = {
+    base:  [[1, 50], [2, 35], [3, 15]],
+    fs:    [[1, 60], [2, 30], [3, 10]],
+    super: [[1, 70], [2, 25], [3, 5]],
+  };
+
+  // Ce qui sort d'un œuf. mult : s'ajoute au Panier. chick : Poussin Wild. dyn : dynamite (explosion 3×3).
+  const PRIZES = {
+    base:  { kinds: [['mult', 55], ['chick', 28], ['dyn', 17]],
+             mult: [[2, 34], [3, 24], [4, 14], [5, 11], [8, 7], [10, 5], [15, 2.5], [25, 1.5], [50, 0.7], [100, 0.3]] },
+    fs:    { kinds: [['mult', 58], ['chick', 26], ['dyn', 16]],
+             mult: [[2, 30], [3, 22], [4, 14], [5, 12], [8, 8], [10, 6], [15, 3.5], [25, 2.5], [50, 1.3], [100, 0.5], [250, 0.15], [500, 0.05]] },
+    super: { kinds: [['mult', 64], ['chick', 22], ['dyn', 14]],
+             mult: [[5, 34], [8, 22], [10, 17], [15, 10], [25, 8], [50, 5], [100, 2.8], [250, 0.9], [500, 0.3]] },
+  };
+  const MODE_IDX = { base: 0, fs: 1, super: 2 };
+
+  // Achats de bonus : prix en multiples de la mise, calés par simulation (simulate.js --buy).
+  const BONUS_BUYS = {
+    grange: { name: 'La Grange en Folie', cost: 100, mode: 'fs', desc: '10 tours gratuits, Panier persistant' },
+    super:  { name: 'Super Grange',       cost: 370, mode: 'super', desc: '10 tours gratuits, œufs en pagaille, multiplicateurs ×5 minimum' },
+  };
+
+  /* ---------- outils ---------- */
+
+  const key = (c, r) => c * 16 + r;
+  const inGrid = (c, r) => c >= 0 && c < COLS && r >= 0 && r < ROWS;
+  const randInt = (rng, n) => Math.floor(rng() * n);
+  const round2 = (x) => Math.round(x * 100) / 100;
+
+  function pickWeighted(entries, rng) {
+    let total = 0;
+    for (const e of entries) total += e[1];
+    let x = rng() * total;
+    for (const e of entries) { x -= e[1]; if (x < 0) return e[0]; }
+    return entries[entries.length - 1][0];
+  }
+
+  function shuffle(a, rng) {
+    for (let i = a.length - 1; i > 0; i--) { const j = randInt(rng, i + 1); const t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  const snap = (grid) => grid.map((col) => col.map((x) => ({ ...x })));
+
+  function countOf(grid, s) {
+    let n = 0;
+    for (const col of grid) for (const x of col) if (x.s === s) n++;
+    return n;
+  }
+
+  /* ---------- génération ---------- */
+
+  function newCell(ctx, forbidEgg) {
+    const mi = MODE_IDX[ctx.mode];
+    const entries = SPAWNABLE.map((k) => {
+      let w = SYMBOLS[k].w[mi];
+      if (k === 'barn' && ctx.ante) w *= CONFIG.anteScatter;
+      if (k === 'egg' && (forbidEgg || ctx.eggs >= CONFIG.maxEggs)) w = 0;
+      return [k, w];
+    });
+    return makeCell(ctx, pickWeighted(entries, ctx.rng));
+  }
+
+  function makeCell(ctx, s) {
+    const cell = { id: ctx.nextId++, s };
+    if (s === 'egg') { cell.hp = pickWeighted(EGG_HP[ctx.mode], ctx.rng); ctx.eggs++; }
+    return cell;
+  }
+
+  function freshGrid(ctx) {
+    ctx.eggs = 0;
+    const g = [];
+    for (let c = 0; c < COLS; c++) { g.push([]); for (let r = 0; r < ROWS; r++) g[c].push(newCell(ctx)); }
+    return g;
+  }
+
+  // Grille d'affichage (au chargement de la page) : que des symboles simples.
+  function randomGrid(rng) {
+    const ctx = { rng, mode: 'base', nextId: 1, eggs: CONFIG.maxEggs };
+    const g = [];
+    for (let c = 0; c < COLS; c++) {
+      g.push([]);
+      for (let r = 0; r < ROWS; r++) g[c].push(makeCell(ctx, PAYING[randInt(rng, PAYING.length)]));
+    }
+    return g;
+  }
+
+  /* ---------- grappes ---------- */
+
+  function findClusters(grid) {
+    const out = [];
+    for (const sym of PAYING) {
+      const seen = new Set();
+      for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
+        if (grid[c][r].s !== sym || seen.has(key(c, r))) continue;
+        const cells = [];
+        const stack = [[c, r]];
+        seen.add(key(c, r));
+        while (stack.length) {
+          const [x, y] = stack.pop();
+          cells.push([x, y]);
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = x + dx, ny = y + dy;
+            if (!inGrid(nx, ny) || seen.has(key(nx, ny))) continue;
+            const s = grid[nx][ny].s;
+            if (s === sym || s === 'wild') { seen.add(key(nx, ny)); stack.push([nx, ny]); }
+          }
+        }
+        if (cells.length >= CONFIG.minCluster) out.push({ sym, cells, size: cells.length });
+      }
+    }
+    return out;
+  }
+
+  const clusterPay = (sym, size) =>
+    SYMBOLS[sym].pay * CURVE[Math.min(size - CONFIG.minCluster, CURVE.length - 1)] * CONFIG.payScale;
+
+  /* ---------- une dégringolade complète ---------- */
+
+  // Joue la grille jusqu'à ce qu'il n'y ait plus de gain. Renvoie le gain (avant Panier) et le Panier.
+  function runSequence(ctx, grid) {
+    let win = 0;
+    let basket = 0;
+    let guard = 0;
+    while (guard++ < CONFIG.maxSteps) {
+      const clusters = findClusters(grid);
+      if (!clusters.length) break;
+
+      const removed = new Set();
+      let stepWin = 0;
+      const wins = clusters.map((cl) => {
+        const pay = round2(clusterPay(cl.sym, cl.size) * ctx.bet * (ctx.mode === 'base' ? 1 : CONFIG.fsPayScale));
+        stepWin += pay;
+        for (const [c, r] of cl.cells) removed.add(key(c, r));
+        return { sym: cl.sym, size: cl.size, pay, cells: cl.cells, ids: cl.cells.map(([c, r]) => grid[c][r].id) };
+      });
+      win += stepWin;
+      ctx.steps.push({ type: 'win', clusters: wins, win: round2(stepWin), seqWin: round2(win) });
+
+      // Les œufs touchés par une grappe (8 cases autour) se fêlent.
+      const events = [];
+      const queue = [];
+      const hit = new Set();
+      for (const k of removed) {
+        const c = Math.floor(k / 16), r = k % 16;
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+          const nx = c + dx, ny = r + dy;
+          if (inGrid(nx, ny) && grid[nx][ny].s === 'egg' && !hit.has(key(nx, ny))) { hit.add(key(nx, ny)); queue.push([nx, ny]); }
+        }
+      }
+      const table = PRIZES[ctx.mode];
+      const born = new Set();
+      while (queue.length) {
+        const [c, r] = queue.shift();
+        const egg = grid[c][r];
+        if (egg.s !== 'egg') continue;
+        egg.hp--;
+        if (egg.hp > 0) { events.push({ t: 'crack', c, r, id: egg.id, hp: egg.hp }); continue; }
+
+        const kind = pickWeighted(table.kinds, ctx.rng);
+        ctx.eggs--;
+        if (kind === 'mult') {
+          const v = pickWeighted(table.mult, ctx.rng);
+          basket += v;
+          egg.s = 'hatched';
+          removed.add(key(c, r));
+          events.push({ t: 'mult', c, r, id: egg.id, value: v, basket });
+        } else if (kind === 'chick') {
+          egg.s = 'wild';
+          delete egg.hp;
+          removed.delete(key(c, r));
+          born.add(key(c, r));
+          events.push({ t: 'chick', c, r, id: egg.id });
+        } else {
+          egg.s = 'hatched';
+          removed.add(key(c, r));
+          const blast = [];
+          for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+            const nx = c + dx, ny = r + dy;
+            if (!inGrid(nx, ny) || (dx === 0 && dy === 0) || born.has(key(nx, ny)) || removed.has(key(nx, ny))) continue;
+            const s = grid[nx][ny].s;
+            if (s === 'egg') queue.push([nx, ny]);          // réaction en chaîne
+            else if (s !== 'barn') { removed.add(key(nx, ny)); blast.push([nx, ny]); }
+          }
+          events.push({ t: 'dyn', c, r, id: egg.id, blast, ids: blast.map(([x, y]) => grid[x][y].id) });
+        }
+      }
+      if (events.length) ctx.steps.push({ type: 'eggs', events, basket });
+
+      if (ctx.capped || ctx.total + win * Math.max(1, basket) >= CONFIG.maxWinX * ctx.bet) break;
+
+      // Chute : on retire, tout tombe, on remplit par le haut.
+      const gone = [];
+      const next = [];
+      for (let c = 0; c < COLS; c++) {
+        const kept = [];
+        for (let r = 0; r < ROWS; r++) {
+          if (removed.has(key(c, r))) { gone.push(grid[c][r].id); if (grid[c][r].s === 'egg') ctx.eggs--; }
+          else kept.push(grid[c][r]);
+        }
+        const add = [];
+        while (add.length + kept.length < ROWS) add.push(newCell(ctx));
+        next.push([...add, ...kept]);
+      }
+      for (let c = 0; c < COLS; c++) grid[c] = next[c];
+      ctx.steps.push({ type: 'tumble', gone, grid: snap(grid) });
+    }
+    return { win: round2(win), basket };
+  }
+
+  /* ---------- Coco pond des œufs ---------- */
+
+  function cocoLays(ctx, grid, chance) {
+    if (ctx.rng() >= chance) return;
+    const spots = [];
+    for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) if (PAYING.includes(grid[c][r].s)) spots.push([c, r]);
+    const n = Math.min(CONFIG.cocoEggs[0] + randInt(ctx.rng, CONFIG.cocoEggs[1] - CONFIG.cocoEggs[0] + 1),
+      Math.max(0, CONFIG.maxEggs - ctx.eggs));
+    if (n <= 0) return;
+    const eggs = shuffle(spots, ctx.rng).slice(0, n).map(([c, r]) => {
+      const cell = makeCell(ctx, 'egg');
+      cell.hp = Math.min(cell.hp, 2);
+      grid[c][r] = cell;
+      return { c, r, cell: { ...cell } };
+    });
+    ctx.steps.push({ type: 'coco', eggs, grid: snap(grid) });
+  }
+
+  /* ---------- plafond ---------- */
+
+  function addWin(ctx, w) {
+    ctx.total = round2(ctx.total + w);
+    if (ctx.total >= CONFIG.maxWinX * ctx.bet) {
+      ctx.total = CONFIG.maxWinX * ctx.bet;
+      if (!ctx.capped) { ctx.capped = true; ctx.steps.push({ type: 'maxwin', total: ctx.total }); }
+    }
+  }
+
+  /* ---------- tours gratuits ---------- */
+
+  function freeSpins(ctx, spins) {
+    const prevMode = ctx.mode;
+    let left = spins;
+    let index = 0;
+    let totalMult = 0;
+    const start = ctx.total;
+    ctx.steps.push({ type: 'fsStart', spins, mode: ctx.mode });
+    while (left > 0 && !ctx.capped) {
+      left--; index++;
+      const grid = freshGrid(ctx);
+      ctx.steps.push({ type: 'fsSpin', index, left, totalMult, grid: snap(grid) });
+      cocoLays(ctx, grid, CONFIG.cocoChanceFs);
+      const seq = runSequence(ctx, grid);
+      let w = seq.win;
+      totalMult += seq.basket;
+      if (totalMult > 0 && w > 0) {
+        const mw = round2(w * totalMult);
+        ctx.steps.push({ type: 'basket', base: w, add: seq.basket, mult: totalMult, win: mw });
+        w = mw;
+      }
+      addWin(ctx, w);
+      ctx.steps.push({ type: 'fsSpinEnd', win: w, fsWin: round2(ctx.total - start), totalMult });
+      const barns = countOf(grid, 'barn');
+      if (barns >= CONFIG.retriggerNeed && !ctx.capped) {
+        left += CONFIG.retriggerSpins;
+        ctx.steps.push({ type: 'retrigger', barns, add: CONFIG.retriggerSpins, left });
+      }
+    }
+    ctx.steps.push({ type: 'fsEnd', win: round2(ctx.total - start), spins: index, totalMult });
+    ctx.mode = prevMode;
+  }
+
+  /* ---------- API ---------- */
+
+  function newCtx(bet, rng, opts) {
+    return { rng, bet, mode: 'base', ante: !!(opts && opts.ante), nextId: 1, eggs: 0, steps: [], total: 0, capped: false };
+  }
+
+  function result(ctx, cost, bonus) {
+    return { steps: ctx.steps, win: round2(ctx.total), cost, bonus };
+  }
+
+  // Une mise complète.
+  function spin(bet, rng, opts) {
+    const ctx = newCtx(bet, rng, opts);
+    const cost = round2(bet * (ctx.ante ? CONFIG.anteCost : 1));
+    const grid = freshGrid(ctx);
+    ctx.steps.push({ type: 'grid', grid: snap(grid) });
+    cocoLays(ctx, grid, CONFIG.cocoChance);
+    const seq = runSequence(ctx, grid);
+    let w = seq.win;
+    if (seq.basket > 0 && w > 0) {
+      const mw = round2(w * seq.basket);
+      ctx.steps.push({ type: 'basket', base: w, add: seq.basket, mult: seq.basket, win: mw });
+      w = mw;
+    }
+    addWin(ctx, w);
+
+    const barns = countOf(grid, 'barn');
+    let bonus = false;
+    if (barns >= CONFIG.scatterNeed && !ctx.capped) {
+      const pay = round2((CONFIG.scatterPay[Math.min(barns, 6)] || 0) * bet);
+      ctx.steps.push({ type: 'scatter', barns, pay, spins: CONFIG.freeSpins });
+      addWin(ctx, pay);
+      bonus = true;
+      ctx.mode = 'fs';
+      freeSpins(ctx, CONFIG.freeSpins);
+    }
+    ctx.steps.push({ type: 'end', win: round2(ctx.total) });
+    return result(ctx, cost, bonus);
+  }
+
+  // Achat direct des tours gratuits.
+  function buyBonus(kind, bet, rng) {
+    const b = BONUS_BUYS[kind];
+    const ctx = newCtx(bet, rng);
+    ctx.mode = b.mode;
+    ctx.steps.push({ type: 'buy', kind, name: b.name });
+    freeSpins(ctx, CONFIG.freeSpins);
+    ctx.steps.push({ type: 'end', win: round2(ctx.total) });
+    return result(ctx, round2(bet * b.cost), true);
+  }
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  const api = { COLS, ROWS, CONFIG, SYMBOLS, PAYING, CURVE, PRIZES, BONUS_BUYS, spin, buyBonus, randomGrid, findClusters, clusterPay, mulberry32 };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.CocoEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* =========================================================
+   COCO BOUM! — dessins cartoon provisoires (SVG)
+   À remplacer par les images finales (voir PROMPT_CHATGPT.md).
+   ========================================================= */
+(function (root) {
+  'use strict';
+  const O = '#2a1608';
+  const S = `stroke="${O}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"`;
+
+  // Yeux cartoon : blanc, pupille, reflet. look = décalage de la pupille.
+  function eye(x, y, r, look = [1, 1]) {
+    return `<ellipse cx="${x}" cy="${y}" rx="${r * 0.8}" ry="${r}" fill="#fff" stroke="${O}" stroke-width="2.5"/>` +
+      `<circle cx="${x + look[0]}" cy="${y + look[1]}" r="${r * 0.48}" fill="${O}"/>` +
+      `<circle cx="${x + look[0] + r * 0.22}" cy="${y + look[1] - r * 0.25}" r="${r * 0.17}" fill="#fff"/>`;
+  }
+  const smile = (x, y, w, d = 6) => `<path d="M${x - w} ${y} Q${x} ${y + d} ${x + w} ${y}" fill="none" stroke="${O}" stroke-width="3" stroke-linecap="round"/>`;
+  const shine = (d) => `<path d="${d}" fill="#fff" opacity=".45"/>`;
+
+  // Contour d'une union de cercles : on trace d'abord les contours épais, puis les remplissages.
+  const blob = (circles, fill) =>
+    circles.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${O}" stroke="${O}" stroke-width="7"/>`).join('') +
+    circles.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`).join('');
+
+  function cornKernels() {
+    let k = '';
+    for (let y = 22; y <= 78; y += 8.5) {
+      const half = 15 - Math.abs(y - 48) * 0.22;
+      for (let x = 50 - half + 4; x <= 50 + half - 3; x += 7.5)
+        k += `<ellipse cx="${x.toFixed(1)}" cy="${y}" rx="3.2" ry="3.6" fill="#ffe98a" stroke="#d99a00" stroke-width="1.3"/>`;
+    }
+    return k;
+  }
+
+  const ART = {
+    corn: `
+      <path d="M50 9 C65 9 70 34 69 58 C68 78 60 88 50 88 C40 88 32 78 31 58 C30 34 35 9 50 9Z" fill="#ffc928" ${S}/>
+      ${cornKernels()}
+      ${shine('M40 20 C36 30 35 42 36 52 C38 40 40 30 44 22Z')}
+      <path d="M49 94 C27 92 14 70 19 36 C27 56 36 68 50 78Z" fill="#6cc644" ${S}/>
+      <path d="M51 94 C73 92 86 70 81 36 C73 56 64 68 50 78Z" fill="#58b536" ${S}/>
+      ${eye(43, 42, 6.5)}${eye(57, 42, 6.5)}
+      ${smile(50, 54, 6, 6)}`,
+
+    carrot: `
+      <path d="M50 34 C44 16 34 8 26 9 C30 18 38 28 48 36Z" fill="#6cc644" ${S}/>
+      <path d="M50 34 C54 14 62 6 72 8 C68 18 60 28 52 36Z" fill="#58b536" ${S}/>
+      <path d="M50 34 C49 20 50 10 52 4 C56 14 55 24 52 36Z" fill="#7ed957" ${S}/>
+      <path d="M24 38 Q50 24 76 38 Q66 66 50 96 Q34 66 24 38Z" fill="#ff8a1f" ${S}/>
+      <path d="M31 56 l9 1 M62 52 l-9 2 M40 74 l7 0 M58 70 l-6 1" stroke="#c75a00" stroke-width="2.5" stroke-linecap="round"/>
+      ${shine('M32 40 C36 50 40 58 44 64 C38 58 33 50 31 42Z')}
+      ${eye(42, 46, 6)}${eye(58, 46, 6)}
+      ${smile(50, 57, 5, 5)}`,
+
+    apple: `
+      <path d="M50 28 C50 20 52 14 58 8" fill="none" ${S}/>
+      <path d="M55 20 C62 8 76 9 81 13 C73 22 63 24 55 20Z" fill="#6cc644" ${S}/>
+      <path d="M50 28 C36 17 14 23 14 50 C14 75 33 92 50 85 C67 92 86 75 86 50 C86 23 64 17 50 28Z" fill="#e8323c" ${S}/>
+      ${shine('M26 38 C22 46 22 56 25 62 C28 52 30 44 34 38Z')}
+      <path d="M33 50 Q39 45 45 50" fill="none" stroke="${O}" stroke-width="3" stroke-linecap="round"/>
+      ${eye(60, 49, 6.5)}
+      ${smile(50, 63, 8, 7)}
+      <ellipse cx="32" cy="62" rx="5" ry="3" fill="#ff8fa0" opacity=".8"/>`,
+
+    sheep: `
+      ${blob([[30, 38, 15], [50, 30, 16], [70, 38, 15], [24, 58, 14], [76, 58, 14], [34, 76, 14], [66, 76, 14], [50, 80, 14]], '#fbf7ef')}
+      <ellipse cx="22" cy="52" rx="9" ry="5" fill="#4b3b47" ${S} transform="rotate(-25 22 52)"/>
+      <ellipse cx="78" cy="52" rx="9" ry="5" fill="#4b3b47" ${S} transform="rotate(25 78 52)"/>
+      <ellipse cx="50" cy="58" rx="18" ry="22" fill="#5a4856" ${S}/>
+      ${blob([[40, 38, 8], [50, 34, 9], [60, 38, 8]], '#fbf7ef')}
+      <path d="M38 55 Q43 51 48 55" fill="#fff" stroke="${O}" stroke-width="2.5"/>
+      <path d="M52 55 Q57 51 62 55" fill="#fff" stroke="${O}" stroke-width="2.5"/>
+      <path d="M38 55 Q43 58 48 55 M52 55 Q57 58 62 55" fill="none" stroke="${O}" stroke-width="2.5"/>
+      <ellipse cx="50" cy="68" rx="5" ry="3.5" fill="#ff9fb5" stroke="${O}" stroke-width="2"/>
+      ${smile(50, 73, 5, 4)}`,
+
+    pig: `
+      <path d="M22 34 L20 12 L40 24Z" fill="#ff85b0" ${S}/>
+      <path d="M78 34 L80 12 L60 24Z" fill="#ff85b0" ${S}/>
+      <circle cx="50" cy="54" r="35" fill="#ffadc9" ${S}/>
+      ${shine('M24 44 C22 52 22 58 24 64 C26 56 28 50 32 44Z')}
+      <ellipse cx="30" cy="62" rx="6" ry="4" fill="#ff7aa6" opacity=".7"/>
+      <ellipse cx="70" cy="62" rx="6" ry="4" fill="#ff7aa6" opacity=".7"/>
+      ${eye(38, 44, 6.5)}${eye(62, 44, 6.5)}
+      <ellipse cx="50" cy="64" rx="15" ry="11" fill="#ff85b0" ${S}/>
+      <ellipse cx="44.5" cy="64" rx="3" ry="4.5" fill="${O}"/>
+      <ellipse cx="55.5" cy="64" rx="3" ry="4.5" fill="${O}"/>
+      ${smile(50, 79, 7, 4)}`,
+
+    cow: `
+      <path d="M30 28 C20 22 16 12 20 5 C26 14 32 18 40 22Z" fill="#fff0c8" ${S}/>
+      <path d="M70 28 C80 22 84 12 80 5 C74 14 68 18 60 22Z" fill="#fff0c8" ${S}/>
+      <ellipse cx="14" cy="40" rx="11" ry="6" fill="#fff" ${S} transform="rotate(20 14 40)"/>
+      <ellipse cx="86" cy="40" rx="11" ry="6" fill="#fff" ${S} transform="rotate(-20 86 40)"/>
+      <path d="M22 40 C22 16 78 16 78 40 L75 64 C73 84 27 84 25 64Z" fill="#fff" ${S}/>
+      <path d="M26 30 C34 26 40 32 36 40 C32 46 24 42 24 36Z" fill="${O}"/>
+      <path d="M62 24 C70 22 76 28 74 36 C68 34 62 32 62 24Z" fill="${O}"/>
+      ${eye(39, 45, 6.5)}${eye(61, 45, 6.5)}
+      <ellipse cx="50" cy="72" rx="23" ry="15" fill="#ffb3c1" ${S}/>
+      <ellipse cx="42" cy="70" rx="3.5" ry="5" fill="${O}"/>
+      <ellipse cx="58" cy="70" rx="3.5" ry="5" fill="${O}"/>
+      ${smile(50, 79, 7, 4)}`,
+
+    fox: `
+      <path d="M50 90 C33 88 14 72 12 50 L18 12 L38 30 C44 28 56 28 62 30 L82 12 L88 50 C86 72 67 88 50 90Z" fill="#ff8a1f" ${S}/>
+      <path d="M22 22 L24 38 L33 31Z M78 22 L76 38 L67 31Z" fill="#7a3b1e"/>
+      <path d="M12 50 C24 64 38 68 50 90 C62 68 76 64 88 50 C75 60 62 62 50 72 C38 62 25 60 12 50Z" fill="#fff" ${S}/>
+      <path d="M31 44 Q38 38 45 45" fill="none" stroke="${O}" stroke-width="3" stroke-linecap="round"/>
+      <path d="M55 42 Q63 34 71 42" fill="none" stroke="${O}" stroke-width="3" stroke-linecap="round"/>
+      <path d="M32 51 Q38 46 44 51 Q38 55 32 51Z" fill="#ffe24a" stroke="${O}" stroke-width="2.5"/>
+      <path d="M56 51 Q62 46 68 51 Q62 55 56 51Z" fill="#ffe24a" stroke="${O}" stroke-width="2.5"/>
+      <circle cx="39" cy="51" r="2.3" fill="${O}"/><circle cx="63" cy="51" r="2.3" fill="${O}"/>
+      <ellipse cx="50" cy="75" rx="6" ry="4.5" fill="${O}"/>
+      <path d="M43 83 Q52 88 60 80" fill="none" stroke="${O}" stroke-width="3" stroke-linecap="round"/>`,
+
+    wild: `
+      <path d="M44 22 C40 12 48 8 50 16 C52 6 60 10 54 22" fill="#ffd23f" ${S}/>
+      <circle cx="50" cy="46" r="26" fill="#ffd23f" ${S}/>
+      ${shine('M32 36 C30 42 30 48 32 52 C34 46 36 42 40 38Z')}
+      <path d="M34 40 h13 v7 a6 6 0 0 1 -13 0Z M53 40 h13 v7 a6 6 0 0 1 -13 0Z" fill="${O}"/>
+      <path d="M47 42 h6" stroke="${O}" stroke-width="3"/>
+      <path d="M37 42 l4 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+      <path d="M44 54 L56 54 L50 62Z" fill="#ff8a1f" ${S}/>
+      <path d="M18 62 L27 54 L35 62 L43 54 L50 62 L57 54 L65 62 L73 54 L82 62 C82 84 68 94 50 94 C32 94 18 84 18 62Z" fill="#fff4dc" ${S}/>
+      <text x="50" y="86" text-anchor="middle" font-family="Luckiest Guy, Impact, sans-serif" font-size="17" fill="#e0452b" stroke="${O}" stroke-width="1.2">WILD</text>`,
+
+    barn: `
+      <path d="M17 46 L50 20 L83 46 L83 90 L17 90Z" fill="#e0452b" ${S}/>
+      <path d="M22 52 v34 M30 50 v36 M70 50 v36 M78 52 v34" stroke="#b8311c" stroke-width="2"/>
+      <path d="M10 48 L50 14 L90 48 L84 53 L50 25 L16 53Z" fill="#7a3b2e" ${S}/>
+      <rect x="42" y="34" width="16" height="12" rx="2" fill="#ffd23f" ${S}/>
+      <rect x="33" y="58" width="34" height="32" fill="#fff" ${S}/>
+      <path d="M33 58 L67 90 M67 58 L33 90 M50 58 V90" stroke="${O}" stroke-width="3.5"/>
+      <rect x="8" y="70" width="84" height="20" rx="6" fill="#ffd23f" ${S}/>
+      <text x="50" y="87" text-anchor="middle" font-family="Luckiest Guy, Impact, sans-serif" font-size="17" fill="#e0452b" stroke="${O}" stroke-width="1">BONUS</text>`,
+
+    egg: `
+      <path d="M50 8 C72 8 84 44 84 62 C84 82 68 93 50 93 C32 93 16 82 16 62 C16 44 28 8 50 8Z" fill="#fff4dc" ${S}/>
+      <circle cx="38" cy="40" r="3" fill="#e7c98f"/><circle cx="63" cy="32" r="2.5" fill="#e7c98f"/>
+      <circle cx="68" cy="60" r="3.5" fill="#e7c98f"/><circle cx="34" cy="70" r="2.5" fill="#e7c98f"/>
+      <circle cx="55" cy="78" r="2" fill="#e7c98f"/>
+      ${shine('M32 30 C26 40 24 52 25 60 C29 48 33 38 40 28Z')}`,
+
+    crack1: `<path d="M20 50 L32 46 L38 54 L48 46 L54 52" fill="none" stroke="${O}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`,
+    crack2: `<path d="M16 56 L28 48 L36 58 L46 46 L56 56 L64 44 L72 52 L84 50" fill="none" stroke="${O}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M46 46 L44 34 L50 26 M56 56 L60 68 L54 76" fill="none" stroke="${O}" stroke-width="2.5" stroke-linecap="round"/>`,
+
+    dynamite: `
+      <path d="M58 22 C64 12 72 12 76 6" fill="none" stroke="#6b4a2a" stroke-width="3.5" stroke-linecap="round"/>
+      <rect x="22" y="26" width="17" height="62" rx="5" fill="#e0452b" ${S}/>
+      <rect x="41" y="22" width="18" height="66" rx="5" fill="#f25a3c" ${S}/>
+      <rect x="61" y="26" width="17" height="62" rx="5" fill="#e0452b" ${S}/>
+      <rect x="18" y="48" width="64" height="12" rx="3" fill="#6b4a2a" ${S}/>
+      ${shine('M45 28 v50 h3 v-50Z')}`,
+
+    spark: `<path d="M50 0 L57 38 L96 30 L64 52 L90 84 L52 64 L34 98 L38 60 L2 66 L34 44 L10 12 L44 34Z" fill="#ffd23f" stroke="${O}" stroke-width="3" stroke-linejoin="round"/>`,
+
+    burst: `<path d="M50 2 L60 30 L88 16 L74 44 L98 56 L70 64 L80 94 L52 76 L30 98 L32 68 L2 62 L26 44 L10 18 L38 28Z" fill="#ffd23f" stroke="${O}" stroke-width="3.5" stroke-linejoin="round"/>
+      <path d="M50 18 L57 36 L76 28 L66 46 L82 56 L64 60 L70 80 L52 68 L36 84 L38 64 L18 60 L34 48 L24 30 L42 36Z" fill="#ff8a1f"/>`,
+  };
+
+  // Coco, la mascotte (inline pour pouvoir animer les yeux et la mèche).
+  const COCO = `
+  <svg class="coco-svg" viewBox="0 0 220 240" aria-hidden="true">
+    <g class="coco-legs" stroke="${O}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M92 196 v26 M92 222 l-12 6 M92 222 l12 6" stroke="#ff9a1f" stroke-width="7"/>
+      <path d="M126 196 v26 M126 222 l-12 6 M126 222 l12 6" stroke="#ff9a1f" stroke-width="7"/>
+    </g>
+    <g class="coco-body">
+      ${blob([[36, 118, 20], [26, 96, 17], [40, 82, 15]], '#fff')}
+      ${blob([[108, 158, 58], [148, 118, 22], [140, 86, 38]], '#fff')}
+      <path d="M92 150 C104 130 136 132 142 156 C136 180 104 186 92 170Z" fill="#f1e6d6" stroke="${O}" stroke-width="3.5"/>
+      <path d="M100 162 q8 -6 14 2 M112 170 q8 -6 14 2" fill="none" stroke="${O}" stroke-width="2.5" stroke-linecap="round"/>
+      <g class="coco-comb">${blob([[124, 50, 12], [140, 44, 13], [156, 52, 11]], '#e8323c')}</g>
+      <path d="M170 84 L200 94 L170 104Z" fill="#ffb21f" stroke="${O}" stroke-width="3.5" stroke-linejoin="round"/>
+      <path d="M172 94 L198 94" stroke="${O}" stroke-width="2.5"/>
+      <path d="M166 104 C174 110 172 124 164 124 C158 120 158 110 166 104Z" fill="#e8323c" stroke="${O}" stroke-width="3"/>
+      <g class="coco-eyes">
+        ${eye(138, 78, 11, [4, 1])}${eye(162, 76, 10, [4, 1])}
+        <rect class="lid" x="124" y="64" width="50" height="28" fill="#fff" />
+      </g>
+      <path d="M128 62 Q138 56 148 62 M154 60 Q162 55 170 60" fill="none" stroke="${O}" stroke-width="3" stroke-linecap="round"/>
+      <ellipse cx="128" cy="100" rx="7" ry="4" fill="#ff9fb5" opacity=".8"/>
+      <g class="coco-dyn" transform="translate(40 150) rotate(-18)">
+        <rect x="0" y="0" width="16" height="44" rx="4" fill="#e0452b" stroke="${O}" stroke-width="3"/>
+        <rect x="-2" y="16" width="20" height="8" rx="2" fill="#6b4a2a" stroke="${O}" stroke-width="2.5"/>
+        <path d="M8 0 C8 -10 16 -12 18 -20" fill="none" stroke="#6b4a2a" stroke-width="3" stroke-linecap="round"/>
+        <g class="fuse-spark" transform="translate(18 -22)">
+          <path d="M0 -9 L3 -3 L9 -3 L4 1 L6 8 L0 4 L-6 8 L-4 1 L-9 -3 L-3 -3Z" fill="#ffd23f" stroke="#ff8a1f" stroke-width="1.5"/>
+        </g>
+      </g>
+    </g>
+  </svg>`;
+
+  function sprite() {
+    return '<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">' +
+      Object.entries(ART).map(([k, v]) => `<symbol id="s-${k}" viewBox="0 0 100 100">${v}</symbol>`).join('') + '</svg>';
+  }
+
+  root.CocoArt = { ART, COCO, sprite, use: (k, cls = '') => `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true"><use href="#s-${k}"/></svg>` };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* =========================================================
+   COCO BOUM! — interface, animations et sons
+   La page ne calcule aucun gain : elle rejoue les étapes
+   renvoyées par CocoEngine (engine.js).
+   ========================================================= */
+(function () {
+  'use strict';
+  const E = window.CocoEngine;
+  const A = window.CocoArt;
+  const { COLS, ROWS } = E;
+  const $ = (id) => document.getElementById(id);
+
+  // Aléa de démonstration. En production, le résultat vient du serveur du casino.
+  const rng = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] / 4294967296; };
+
+  const BETS = [0.2, 0.4, 0.6, 1, 2, 4, 5, 10, 20, 50, 100];
+  const state = { balance: 1000, betIdx: 3, busy: false, turbo: false, auto: 0, sound: true, hurry: false, fs: false, fsTotal: 0 };
+  try { const b = +localStorage.getItem('cocoBalance'); if (b > 0) state.balance = b; } catch (e) { /* stockage indisponible */ }
+
+  const fmt = (n) => n.toLocaleString('fr-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const bet = () => BETS[state.betIdx];
+  const spd = () => (state.turbo ? 2 : 1) * (state.hurry ? 3 : 1);
+  const applySpeed = () => document.documentElement.style.setProperty('--speed', spd());
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms / spd()));
+  const reflow = (el) => void el.offsetWidth;
+
+  document.body.insertAdjacentHTML('afterbegin', A.sprite());
+  $('coco').innerHTML = A.COCO;
+
+  /* ---------- sons (synthétisés, rien à télécharger) ---------- */
+  let ac = null, unlocked = false;
+  addEventListener('pointerdown', () => { unlocked = true; }, { once: true, capture: true });
+  addEventListener('keydown', () => { unlocked = true; }, { once: true, capture: true });
+  function audio() {
+    if (!state.sound || !unlocked) return null;
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function tone(f, dur, type = 'square', vol = 0.06, to = null, delay = 0) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + delay;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function noise(dur, vol = 0.2, freq = 1200, delay = 0) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + delay;
+    const buf = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    src.buffer = buf; f.type = 'lowpass'; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(a.destination); src.start(t);
+  }
+  const sfx = {
+    whoosh: () => noise(0.25, 0.08, 2500),
+    land: (c) => tone(260 - c * 12, 0.09, 'triangle', 0.05, 120),
+    pop: (i) => { tone(520 + i * 70, 0.12, 'square', 0.04, 1000); noise(0.05, 0.05, 4000); },
+    win: (n) => [0, 4, 7, 12].forEach((s, i) => tone(523 * Math.pow(2, (s + n * 2) / 12), 0.14, 'square', 0.045, null, i * 0.07)),
+    crack: () => { noise(0.07, 0.25, 3500); noise(0.05, 0.2, 2500, 0.07); },
+    hatch: () => tone(600, 0.2, 'sine', 0.1, 1500),
+    ding: () => { tone(1320, 0.25, 'triangle', 0.07); tone(1760, 0.3, 'triangle', 0.05, null, 0.08); },
+    chick: () => { tone(1800, 0.07, 'sine', 0.08, 2600); tone(1800, 0.07, 'sine', 0.08, 2600, 0.12); },
+    fuse: () => noise(0.7, 0.07, 7000),
+    boom: () => { noise(0.9, 0.55, 600); tone(110, 0.6, 'sawtooth', 0.15, 35); },
+    cluck: () => [0, 0.14, 0.3].forEach((d) => tone(760, 0.08, 'square', 0.05, 520, d)),
+    boing: () => tone(180, 0.35, 'sine', 0.14, 620),
+    fanfare: () => [0, 4, 7, 12, 7, 12, 16].forEach((s, i) => tone(392 * Math.pow(2, s / 12), 0.2, 'square', 0.05, null, i * 0.12)),
+    coin: () => tone(1600 + Math.random() * 600, 0.08, 'triangle', 0.035),
+  };
+
+  /* ---------- plateau ---------- */
+  const board = $('board'), fx = $('fx'), wrap = $('boardWrap');
+  const els = new Map();
+  let gen = 0;
+  const k = (id) => gen + ':' + id;
+  const cellPx = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell')) || 64;
+  const center = (c, r) => [(c + 0.5) * cellPx(), (r + 0.5) * cellPx()];
+
+  function crackHTML(hp) { return hp >= 3 ? '' : A.use(hp === 2 ? 'crack1' : 'crack2'); }
+  function symHTML(cell) {
+    if (cell.s === 'egg') return `<div class="sym">${A.use('egg')}<div class="crack">${crackHTML(cell.hp)}</div></div>`;
+    return `<div class="sym">${A.use(cell.s)}</div>`;
+  }
+  function makeEl(cell) {
+    const el = document.createElement('div');
+    el.className = 'cell ' + cell.s;
+    el.innerHTML = symHTML(cell);
+    board.appendChild(el);
+    els.set(k(cell.id), el);
+    return el;
+  }
+  function setCell(el, cell) { el.className = 'cell ' + cell.s; el.innerHTML = symHTML(cell); }
+  function place(el, c, r) {
+    el.style.transform = `translate(calc(var(--cell) * ${c}), calc(var(--cell) * ${r}))`;
+    el.dataset.c = c; el.dataset.r = r;
+  }
+  function land(list) {
+    for (const el of list) { el.classList.remove('landed'); reflow(el); el.classList.add('landed'); }
+  }
+
+  async function dropGrid(grid, first) {
+    const old = [...board.querySelectorAll('.cell')];
+    if (old.length && !first) {
+      sfx.whoosh();
+      for (const el of old) {
+        el.style.transitionTimingFunction = 'cubic-bezier(.5,0,.9,.4)';
+        el.style.transitionDelay = (+el.dataset.c * 35) / spd() + 'ms';
+        place(el, +el.dataset.c, +el.dataset.r + ROWS + 1);
+      }
+      await wait(330 + COLS * 35);
+    }
+    old.forEach((el) => el.remove());
+    els.clear();
+    const fresh = [];
+    for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
+      const el = makeEl(grid[c][r]);
+      el.classList.add('no-anim');
+      place(el, c, r - ROWS - 1);
+      fresh.push([el, c, r]);
+    }
+    reflow(board);
+    for (const [el, c, r] of fresh) {
+      el.classList.remove('no-anim');
+      el.style.transitionDelay = (c * 55 + (ROWS - r) * 14) / spd() + 'ms';
+      place(el, c, r);
+    }
+    for (let c = 0; c < COLS; c++) setTimeout(() => sfx.land(c), (c * 55 + 300) / spd());
+    await wait(380 + COLS * 55 + ROWS * 14);
+    for (const [el] of fresh) el.style.transitionDelay = '';
+    land(fresh.map((f) => f[0]));
+  }
+
+  async function tumble(step) {
+    let i = 0;
+    for (const id of step.gone) {
+      const el = els.get(k(id));
+      if (!el) continue;
+      el.classList.add('pop');
+      const [x, y] = center(+el.dataset.c, +el.dataset.r);
+      if (i++ % 3 === 0) stars(x, y, 3);
+    }
+    sfx.pop(0);
+    await wait(300);
+    for (const id of step.gone) { const el = els.get(k(id)); if (el) { el.remove(); els.delete(k(id)); } }
+
+    const moved = [];
+    for (let c = 0; c < COLS; c++) {
+      let fresh = 0;
+      for (let r = 0; r < ROWS; r++) if (!els.has(k(step.grid[c][r].id))) fresh++;
+      for (let r = 0; r < ROWS; r++) {
+        const cell = step.grid[c][r];
+        let el = els.get(k(cell.id));
+        if (!el) { el = makeEl(cell); el.classList.add('no-anim'); place(el, c, r - fresh - 0.3); }
+        else if (+el.dataset.r === r) continue;
+        moved.push([el, c, r]);
+      }
+    }
+    reflow(board);
+    for (const [el, c, r] of moved) {
+      el.classList.remove('no-anim');
+      el.style.transitionDelay = (c * 25) / spd() + 'ms';
+      place(el, c, r);
+    }
+    if (moved.length) { sfx.land(2); await wait(420 + COLS * 25); }
+    for (const [el] of moved) el.style.transitionDelay = '';
+    land(moved.map((m) => m[0]));
+  }
+
+  /* ---------- petits effets ---------- */
+  function word(text, x, y, cls = '', size = 0.55) {
+    const w = document.createElement('div');
+    w.className = 'word ' + cls;
+    w.textContent = text;
+    w.style.left = x + 'px'; w.style.top = y + 'px';
+    w.style.fontSize = cellPx() * size + 'px';
+    fx.appendChild(w);
+    setTimeout(() => w.remove(), 1000 / spd());
+  }
+  function stars(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.innerHTML = A.use('spark');
+      s.style.cssText = `left:${x}px;top:${y}px;--dx:${(Math.random() - 0.5) * 140}px;--dy:${-30 - Math.random() * 60}px`;
+      fx.appendChild(s);
+      setTimeout(() => s.remove(), 650 / spd());
+    }
+  }
+  function shells(x, y) {
+    for (const cls of ['top', 'bot']) {
+      const s = document.createElement('div');
+      s.className = 'shell ' + cls;
+      s.style.left = x - cellPx() * 0.25 + 'px';
+      s.style.top = y + (cls === 'top' ? -cellPx() * 0.3 : 0) + 'px';
+      fx.appendChild(s);
+      setTimeout(() => s.remove(), 650 / spd());
+    }
+  }
+  function puff(x, y) {
+    const p = document.createElement('div');
+    p.className = 'puff'; p.style.left = x + 'px'; p.style.top = y + 'px';
+    fx.appendChild(p);
+    setTimeout(() => p.remove(), 550 / spd());
+  }
+  function shakeBoard() { wrap.classList.remove('shakeAll'); reflow(wrap); wrap.classList.add('shakeAll'); }
+
+  let bubbleTimer = 0;
+  function say(text, ms = 1400) {
+    const b = $('bubble');
+    b.textContent = text; b.hidden = false;
+    b.style.animation = 'none'; reflow(b); b.style.animation = '';
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => { b.hidden = true; }, ms / spd());
+  }
+  function coco(mood) {
+    const c = $('coco');
+    c.classList.remove('happy', 'scared'); reflow(c);
+    if (mood) c.classList.add(mood);
+  }
+
+  function setBasket(v, bump) {
+    $('basketVal').textContent = '×' + v;
+    $('basket').classList.toggle('hot', v > 0);
+    if (bump) { const b = $('basket'); b.classList.remove('bump'); reflow(b); b.classList.add('bump'); }
+  }
+  function showWin(v) { $('win').textContent = fmt(v); }
+  function showBalance() {
+    $('balance').textContent = fmt(state.balance);
+    try { localStorage.setItem('cocoBalance', String(state.balance)); } catch (e) { /* stockage indisponible */ }
+  }
+  function floatWin(html, ms = 900) {
+    const f = $('winFloat');
+    f.innerHTML = html; f.hidden = false;
+    f.style.animation = 'none'; reflow(f); f.style.animation = '';
+    return wait(ms).then(() => { f.hidden = true; });
+  }
+
+  /* ---------- fenêtres ---------- */
+  function overlay(html, { autoMs = 0, dismiss = true } = {}) {
+    return new Promise((resolve) => {
+      const ov = $('overlay'), card = $('overlayCard');
+      card.innerHTML = html;
+      ov.hidden = false;
+      let done = false;
+      const close = (v) => { if (done) return; done = true; ov.hidden = true; resolve(v); };
+      card.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => close(b.dataset.v)));
+      if (dismiss) ov.onclick = (e) => { if (e.target === ov) close(null); };
+      else ov.onclick = null;
+      if (autoMs) setTimeout(() => close('go'), autoMs);
+      const first = card.querySelector('button');
+      if (first) first.focus();
+    });
+  }
+
+  /* ---------- confettis : pièces, plumes, œufs ---------- */
+  const cv = $('confetti'), cx = cv.getContext('2d');
+  let parts = [], raf = 0;
+  function rain(n, kinds = ['coin', 'feather', 'coin', 'egg']) {
+    cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio;
+    for (let i = 0; i < n; i++) parts.push({
+      kind: kinds[i % kinds.length], x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * 0.8,
+      vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.2, s: 10 + Math.random() * 10,
+    });
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function tick() {
+    const d = devicePixelRatio;
+    cx.setTransform(d, 0, 0, d, 0, 0);
+    cx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter((p) => p.y < innerHeight + 40);
+    for (const p of parts) {
+      p.x += p.vx + (p.kind === 'feather' ? Math.sin(p.a) * 1.5 : 0); p.y += p.kind === 'feather' ? p.vy * 0.5 : p.vy; p.a += p.va; p.vy += p.kind === 'feather' ? 0 : 0.05;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.a); cx.lineWidth = 2.5; cx.strokeStyle = '#2a1608';
+      cx.beginPath();
+      if (p.kind === 'coin') { cx.ellipse(0, 0, p.s * Math.abs(Math.cos(p.a * 2)) + 1, p.s, 0, 0, 7); cx.fillStyle = '#ffd23f'; }
+      else if (p.kind === 'egg') { cx.ellipse(0, 0, p.s * 0.75, p.s, 0, 0, 7); cx.fillStyle = '#fff4dc'; }
+      else { cx.ellipse(0, 0, p.s * 0.35, p.s, 0, 0, 7); cx.fillStyle = '#fff'; }
+      cx.fill(); cx.stroke(); cx.restore();
+    }
+    raf = parts.length ? requestAnimationFrame(tick) : 0;
+    if (!raf) cx.clearRect(0, 0, innerWidth, innerHeight);
+  }
+
+  /* ---------- rejouer une mise ---------- */
+  let runBase = 0, seqVal = 0, fsBase = 0, cascade = 0;
+
+  const handlers = {
+    async grid(s) { cascade = 0; await dropGrid(s.grid); },
+
+    async coco(s) {
+      coco('happy'); say('COT COT!'); sfx.cluck();
+      const runner = document.createElement('div');
+      runner.className = 'runner';
+      runner.innerHTML = A.COCO;
+      fx.appendChild(runner);
+      reflow(runner);
+      runner.style.left = '105%';
+      const cross = 1100;
+      for (const e of [...s.eggs].sort((a, b) => a.c - b.c)) {
+        setTimeout(() => {
+          const old = [...board.querySelectorAll('.cell')].find((el) => +el.dataset.c === e.c && +el.dataset.r === e.r);
+          if (old) { old.classList.add('pop'); setTimeout(() => old.remove(), 250 / spd()); for (const [kk, v] of els) if (v === old) els.delete(kk); }
+          const el = makeEl(e.cell);
+          el.classList.add('no-anim'); place(el, e.c, -1.2); reflow(el);
+          el.classList.remove('no-anim'); place(el, e.c, e.r);
+          setTimeout(() => { land([el]); sfx.boing(); }, 380 / spd());
+        }, (cross * (e.c + 0.8)) / (COLS + 1.5) / spd());
+      }
+      await wait(cross + 500);
+      runner.remove();
+    },
+
+    async win(s) {
+      cascade++;
+      const all = [];
+      for (const cl of s.clusters) {
+        for (const id of cl.ids) { const el = els.get(k(id)); if (el) { el.classList.add('win'); all.push(el); } }
+        const [sx, sy] = cl.cells.reduce((a, [c, r]) => [a[0] + c, a[1] + r], [0, 0]);
+        const [x, y] = center(sx / cl.cells.length, sy / cl.cells.length);
+        word('+' + fmt(cl.pay), x, y, 'white', 0.42);
+      }
+      sfx.win(Math.min(cascade - 1, 6));
+      if (cascade === 1) coco('happy');
+      seqVal = s.seqWin;
+      showWin(runBase + seqVal);
+      await wait(650);
+      for (const el of all) el.classList.remove('win');
+    },
+
+    async eggs(s) {
+      for (const e of s.events) {
+        const el = els.get(k(e.id));
+        const [x, y] = center(e.c, e.r);
+        if (e.t === 'crack') {
+          if (el) { el.classList.remove('shake'); reflow(el); el.classList.add('shake'); el.querySelector('.crack').innerHTML = crackHTML(e.hp); }
+          word('CRAC!', x, y - cellPx() * 0.3, '', 0.4);
+          sfx.crack();
+          await wait(380);
+        } else if (e.t === 'mult') {
+          if (el) { el.classList.add('shake'); await wait(260); el.style.opacity = '0'; }
+          shells(x, y); puff(x, y); sfx.hatch();
+          const m = document.createElement('div');
+          m.className = 'medal born';
+          m.innerHTML = A.use('burst') + `<b>×${e.value}</b>`;
+          m.style.left = x + 'px'; m.style.top = y + 'px';
+          fx.appendChild(m);
+          if (e.value >= 25) { say(e.value >= 100 ? 'WOUAAH!' : 'OH OUI!'); coco('happy'); }
+          await wait(e.value >= 25 ? 900 : 560);
+          const br = $('basket').getBoundingClientRect(), fr = fx.getBoundingClientRect();
+          m.classList.remove('born');
+          m.style.left = br.left + br.width / 2 - fr.left + 'px';
+          m.style.top = br.top + br.height / 2 - fr.top + 'px';
+          m.style.transform = 'translate(-50%,-50%) scale(.5)';
+          await wait(600);
+          m.remove();
+          setBasket(state.fs ? state.fsTotal + e.basket : e.basket, true);
+          sfx.ding();
+        } else if (e.t === 'chick') {
+          if (el) { el.classList.add('shake'); await wait(260); }
+          puff(x, y); sfx.chick();
+          if (el) { setCell(el, { s: 'wild' }); land([el]); }
+          word('PIOU!', x, y - cellPx() * 0.4, '', 0.45);
+          await wait(450);
+        } else if (e.t === 'dyn') {
+          if (el) { el.classList.add('shake'); await wait(240); el.style.opacity = '0'; }
+          shells(x, y);
+          const d = document.createElement('div');
+          d.className = 'dyn';
+          d.innerHTML = A.use('dynamite') + `<div class="sp">${A.use('spark')}</div>`;
+          d.style.left = x + 'px'; d.style.top = y + 'px';
+          fx.appendChild(d);
+          coco('scared'); say('AÏE AÏE!', 900); sfx.fuse();
+          await wait(750);
+          d.remove();
+          const b = document.createElement('div');
+          b.className = 'boom'; b.innerHTML = A.use('burst');
+          b.style.left = x + 'px'; b.style.top = y + 'px';
+          fx.appendChild(b);
+          setTimeout(() => b.remove(), 700 / spd());
+          word('BOUM!', x, y, 'red', 0.8);
+          sfx.boom(); shakeBoard();
+          for (const id of e.ids) { const t = els.get(k(id)); if (t) t.classList.add('charred'); }
+          await wait(520);
+        }
+      }
+    },
+
+    tumble,
+
+    async basket(s) {
+      sfx.boing();
+      seqVal = s.win;
+      await floatWin(`${fmt(s.base)} <em>×${s.mult}</em>`, 900);
+      sfx.fanfare();
+      showWin(runBase + seqVal);
+      await floatWin(fmt(s.win), 900);
+      if (!state.fs) setBasket(0);
+    },
+
+    async scatter(s) {
+      for (const el of board.querySelectorAll('.cell.barn')) el.classList.add('glow');
+      sfx.fanfare(); coco('happy'); say('LA GRANGE!', 1800);
+      runBase = runBase + seqVal + s.pay; seqVal = 0;
+      showWin(runBase);
+      await wait(1500);
+    },
+
+    async buy() { runBase = 0; seqVal = 0; },
+
+    async fsStart(s) {
+      const sup = s.mode === 'super';
+      await overlay(`<h2 class="red">${sup ? 'SUPER GRANGE!' : 'LA GRANGE EN FOLIE!'}</h2>
+        <div class="big">${s.spins} tours gratuits</div>
+        <p>Le Panier ne se vide plus : chaque multiplicateur s'ajoute et multiplie tous les gains suivants.${sup ? ' Œufs en pagaille, multiplicateurs ×5 minimum.' : ''}</p>
+        <button class="go" data-v="go">C'est parti !</button>`, { autoMs: state.auto ? 2500 : 0, dismiss: false });
+      state.fs = true; state.fsTotal = 0; fsBase = runBase;
+      document.body.classList.add('fs');
+      $('fsBox').hidden = false; $('fsLeft').textContent = s.spins;
+      setBasket(0);
+    },
+
+    async fsSpin(s) {
+      state.fsTotal = s.totalMult; seqVal = 0; cascade = 0;
+      $('fsLeft').textContent = s.left;
+      setBasket(s.totalMult);
+      await dropGrid(s.grid);
+    },
+
+    async fsSpinEnd(s) {
+      runBase = fsBase + s.fsWin; seqVal = 0;
+      state.fsTotal = s.totalMult;
+      setBasket(s.totalMult);
+      showWin(runBase);
+      await wait(s.win > 0 ? 450 : 250);
+    },
+
+    async retrigger(s) {
+      for (const el of board.querySelectorAll('.cell.barn')) el.classList.add('glow');
+      $('fsLeft').textContent = s.left;
+      const [x, y] = center(COLS / 2 - 0.5, ROWS / 2 - 0.5);
+      word(`+${s.add} TOURS!`, x, y, 'red', 1);
+      sfx.fanfare();
+      await wait(1300);
+    },
+
+    async fsEnd(s) {
+      await overlay(`<h2>TOTAL GAGNÉ</h2><div class="big">${fmt(s.win)}</div>
+        <p>${s.spins} tours gratuits, Panier final ×${s.totalMult}.</p><button class="go" data-v="go">Super !</button>`, { autoMs: state.auto ? 2500 : 0 });
+      state.fs = false; state.fsTotal = 0;
+      document.body.classList.remove('fs');
+      $('fsBox').hidden = true;
+      setBasket(0);
+    },
+
+    async maxwin(s) {
+      rain(160); sfx.fanfare();
+      await overlay(`<h2 class="red">BOUM MAXIMUM!</h2><div class="big">×${E.CONFIG.maxWinX.toLocaleString('fr-CH')}</div>
+        <p>Coco a fait sauter la banque : ${fmt(s.total)}.</p><button class="go" data-v="go">Incroyable !</button>`);
+    },
+
+    async end(s) { showWin(s.win); },
+  };
+
+  async function bigWin(win) {
+    const x = win / bet();
+    if (x < 20) return;
+    const tiers = [[500, 'COCO-LOSSAL!'], [100, 'ÉNORME!'], [50, 'MÉGA GAIN!'], [20, 'GROS GAIN!']];
+    const title = tiers.find((t) => x >= t[0])[1];
+    coco('happy'); say('COT COT CODEC!', 2500);
+    rain(Math.min(220, 40 + x / 3));
+    const p = overlay(`<div class="bigwin"><h2>${title}</h2><div class="big" id="bwAmount">0,00</div><p>×${Math.round(x)} la mise</p>
+      <button class="go" data-v="go">Encaisser</button></div>`, { autoMs: state.auto ? 3500 : 0 });
+    const t0 = performance.now(), dur = Math.min(4000, 1200 + x * 6) / spd();
+    let lastCoin = 0;
+    (function count(now) {
+      const f = Math.min(1, (now - t0) / dur);
+      const node = $('bwAmount');
+      if (!node) return;
+      node.textContent = fmt(win * (1 - Math.pow(1 - f, 3)));
+      if (now - lastCoin > 90) { sfx.coin(); lastCoin = now; }
+      if (f < 1) requestAnimationFrame(count);
+    })(t0);
+    await p;
+  }
+
+  async function play(makeResult, cost) {
+    if (state.busy) return;
+    if (state.balance + 1e-9 < cost) {
+      state.auto = 0; updateButtons();
+      await overlay(`<h2 class="red">Plus assez de crédits</h2><p>Coco vous offre 1 000 crédits fictifs pour continuer à jouer.</p><button class="go" data-v="go">Merci Coco !</button>`);
+      state.balance += 1000; showBalance();
+      return;
+    }
+    state.busy = true; state.hurry = false; applySpeed(); updateButtons();
+    state.balance = Math.round((state.balance - cost) * 100) / 100; showBalance();
+    showWin(0); runBase = 0; seqVal = 0;
+    const res = makeResult();
+    gen++;
+    for (const s of res.steps) { const h = handlers[s.type]; if (h) await h(s); }
+    state.balance = Math.round((state.balance + res.win) * 100) / 100; showBalance();
+    await bigWin(res.win);
+    state.busy = false; state.hurry = false; applySpeed(); updateButtons();
+    if (state.auto > 0) {
+      state.auto--; updateButtons();
+      if (state.auto > 0) setTimeout(spinOnce, 300);
+    }
+  }
+
+  function spinOnce() {
+    const ante = $('ante').checked;
+    const b = bet();
+    play(() => E.spin(b, rng, { ante }), Math.round(b * (ante ? E.CONFIG.anteCost : 1) * 100) / 100);
+  }
+
+  /* ---------- commandes ---------- */
+  function updateButtons() {
+    $('spin').classList.toggle('busy', state.busy);
+    $('bet').textContent = fmt(bet());
+    $('betDown').disabled = state.busy || state.betIdx === 0;
+    $('betUp').disabled = state.busy || state.betIdx === BETS.length - 1;
+    $('buyBtn').classList.toggle('off', state.busy);
+    $('anteBox').classList.toggle('off', state.busy);
+    $('autoBtn').textContent = state.auto ? `Stop (${state.auto})` : 'Auto';
+    $('autoBtn').classList.toggle('on', state.auto > 0);
+    $('turboBtn').classList.toggle('on', state.turbo);
+    $('soundBtn').textContent = state.sound ? '🔊' : '🔇';
+  }
+
+  $('spin').addEventListener('click', () => {
+    audio();
+    if (state.busy) { state.hurry = true; applySpeed(); return; }
+    spinOnce();
+  });
+  wrap.addEventListener('click', () => { if (state.busy) { state.hurry = true; applySpeed(); } });
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && $('overlay').hidden) { e.preventDefault(); $('spin').click(); }
+  });
+  $('betDown').onclick = () => { if (state.betIdx > 0) state.betIdx--; updateButtons(); };
+  $('betUp').onclick = () => { if (state.betIdx < BETS.length - 1) state.betIdx++; updateButtons(); };
+  $('turboBtn').onclick = () => { state.turbo = !state.turbo; applySpeed(); updateButtons(); };
+  $('soundBtn').onclick = () => { state.sound = !state.sound; updateButtons(); };
+  $('autoBtn').onclick = () => {
+    audio();
+    if (state.auto) { state.auto = 0; updateButtons(); return; }
+    state.auto = 50; updateButtons();
+    if (!state.busy) spinOnce();
+  };
+
+  $('buyBtn').onclick = async () => {
+    if (state.busy) return;
+    audio();
+    const b = bet();
+    const cards = Object.entries(E.BONUS_BUYS).map(([kind, v]) => {
+      const price = v.cost * b;
+      return `<div class="buycard"><svg viewBox="0 0 100 100" width="70" height="70"><use href="#s-${kind === 'super' ? 'egg' : 'barn'}"/></svg>
+        <h3>${v.name}</h3><p>${v.desc}</p><div class="price">${fmt(price)}</div><p>${v.cost}× la mise</p>
+        <button class="go" data-v="${kind}" ${state.balance < price ? 'disabled' : ''}>Acheter</button></div>`;
+    }).join('');
+    const kind = await overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button><h2 class="red">Acheter le bonus</h2>
+      <div class="row">${cards}</div>`);
+    if (kind && E.BONUS_BUYS[kind]) play(() => E.buyBonus(kind, b, rng), E.BONUS_BUYS[kind].cost * b);
+  };
+
+  $('infoBtn').onclick = () => {
+    const b = bet();
+    const pays = E.PAYING.slice().reverse().map((s) => `<div class="pay">${A.use(s)}<b>${E.SYMBOLS[s].name}</b>
+      ${[5, 8, 10, 15].map((n) => `<div><span>${n}${n === 15 ? '+' : ''}</span><span>${fmt(E.clusterPay(s, n) * b)}</span></div>`).join('')}</div>`).join('');
+    overlay(`<button class="round close" data-v="" aria-label="Fermer">×</button><h2>Règles et gains</h2>
+      <p>Gains pour une mise de ${fmt(b)}. On gagne avec une grappe de 5 symboles identiques ou plus qui se touchent (haut, bas, gauche, droite).</p>
+      <div class="paytable">${pays}</div>
+      <ul class="rules">
+        <li><b>Dégringolade :</b> les grappes gagnantes explosent, tout tombe, de nouveaux symboles arrivent. On continue tant qu'il y a des gains.</li>
+        <li><b>Coco</b> traverse parfois la grille et pond 2 à 4 œufs.</li>
+        <li><b>Œufs :</b> chaque grappe qui explose à côté d'un œuf le fêle. Après 1 à 3 coups, il éclot : <b>multiplicateur</b> ×2 à ×500 (dans le Panier), <b>Poussin Wild</b> (joker), ou <b>dynamite</b> qui fait sauter 3×3 cases et fêle les œufs voisins.</li>
+        <li><b>Panier :</b> les multiplicateurs s'additionnent et multiplient le gain du tour.</li>
+        <li><b>4 Granges</b> ou plus : 10 tours gratuits « La Grange en Folie » (4 : ×3, 5 : ×5, 6 : ×100 la mise). Le Panier ne se vide plus. 3 Granges pendant le bonus : +5 tours.</li>
+        <li><b>Double Chance :</b> la mise coûte ×1,25 et le bonus arrive environ 1,5× plus souvent.</li>
+        <li>Gain maximum : ×${E.CONFIG.maxWinX.toLocaleString('fr-CH')} la mise. RTP théorique ≈ 96 %. Crédits fictifs, démonstration uniquement.</li>
+      </ul>`);
+  };
+
+  /* ---------- taille du plateau ---------- */
+  const narrow = matchMedia('(max-width: 820px), (max-aspect-ratio: 1/1)');
+  function resize() {
+    const st = $('stage').getBoundingClientRect();
+    let w, h;
+    if (narrow.matches) {
+      w = st.width - 20;
+      h = st.height - $('left').offsetHeight - $('right').offsetHeight - 30;
+    } else {
+      w = st.width - Math.max(200, st.width * 0.2) * 2 - 40;
+      h = st.height - 16;
+    }
+    const cell = Math.max(30, Math.min(118, Math.floor(Math.min((w - 38) / COLS, (h - 38) / ROWS))));
+    document.documentElement.style.setProperty('--cell', cell + 'px');
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  showBalance(); updateButtons(); applySpeed();
+  dropGrid(E.randomGrid(rng), true);
+  setTimeout(() => say('Clique sur l\'œuf !', 2500), 900);
+
+  // Pour tester depuis la console : coco.bonus(), coco.super()
+  window.coco = {
+    bonus: () => play(() => E.buyBonus('grange', bet(), rng), 0),
+    super: () => play(() => E.buyBonus('super', bet(), rng), 0),
+    replay: (r) => play(() => r, 0),
+    eggs: () => { let r; do r = E.spin(bet(), rng); while (!r.steps.some((s) => s.type === 'coco')); play(() => r, bet()); },
+  };
+})();
+
+</script>
+</body>
+</html>
