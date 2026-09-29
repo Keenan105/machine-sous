@@ -1,5 +1,7 @@
 # ⚡ STORMBOUND — La Tempête des Anciens
 
+> 🆕 Nouvelle machine en préparation : **[COCO BOUM!](coco-boum/)**, la poule qui pond de la dynamite (style dessin animé).
+
 Prototype jouable d'une machine à sous au thème de tempête fantastique (HTML/CSS/JS, sans dépendance).
 
 **Lancer en local (lien http) :** sous Windows, double-cliquer sur `lancer.bat` ; la machine s'ouvre sur http://localhost:8000/ (fermer la fenêtre noire pour l'arrêter). Sur Mac ou Linux : `./lancer.command`. On peut aussi ouvrir `index.html` directement.
